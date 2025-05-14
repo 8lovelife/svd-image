@@ -3,7 +3,7 @@
 import { ColorSvdData, SvdData } from "@/lib/utils";
 import { SingularValuesAreaChartGrayscale } from "./singular-values-areachart-grayscale";
 import { SingularValuesAreaChartRGB } from "./singular-values-areachart-rgb";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"; // shadcn/ui Card
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"; // shadcn/ui Card
 import { SvdMatrixVisualizer } from "./svd-matrix";
 
 interface SvdAnalysisProps {
@@ -31,6 +31,9 @@ export default function SvdAnalysis({
         <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
             <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
                 <CardTitle>SVD Data Analysis</CardTitle>
+                <CardDescription>
+                    Visualize and explore the singular‐value spectrum, compression ratio, and reconstruction quality.
+                </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"> {/* CONTENT IS SCROLLABLE AND EXPANDS */}
                 {/* Section 1: Singular Value Area Chart */}

@@ -1,41 +1,48 @@
 "use client"
 
-import type React from "react"
-
+import type React from "react" // No need for 'type' if you're not using React.FC etc. and have "jsx": "react-jsx" in tsconfig
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card" // Removed CardHeader, etc. as not used
 import { Upload, ImageIcon } from "lucide-react"
-import { performColorSVD, performSVD } from "@/lib/svd"
-import { SvdData } from "@/lib/utils"
-
+import { performColorSVD } from "@/lib/svd" // Assuming performSVD is not directly used here
+import { SvdData, ColorSvdData } from "@/lib/utils" // Assuming ColorSvdData is {r:SvdData, g:SvdData, b:SvdData}
 
 
 interface ImageUploadProps {
     onImageUploaded: (
-        imageData: string,
+        imageDataUrl: string, // Renamed for clarity: this is the data URL string
         rawImageData: ImageData,
         width: number,
         height: number,
-        svdData: { r: SvdData, g: SvdData, b: SvdData } | null,
+        svdData: ColorSvdData | null, // Use specific ColorSvdData type
     ) => void
-    // onProcessingStart: () => void
+    disabled?: boolean; // Added disabled prop
 }
 
-export default function ImageUpload({ onImageUploaded }: ImageUploadProps) {
+export default function ImageUpload({ onImageUploaded, disabled = false }: ImageUploadProps) {
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const handleDragOver = (e: React.DragEvent) => {
+    const handleTriggerClick = () => {
+        if (!disabled && fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { // Typed event for Card
+        if (disabled) return;
         e.preventDefault()
         setIsDragging(true)
     }
 
-    const handleDragLeave = () => {
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => { // Typed event
+        if (disabled) return;
         setIsDragging(false)
     }
 
-    const handleDrop = (e: React.DragEvent) => {
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => { // Typed event
+        if (disabled) return;
         e.preventDefault()
         setIsDragging(false)
 
@@ -45,83 +52,108 @@ export default function ImageUpload({ onImageUploaded }: ImageUploadProps) {
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return;
         if (e.target.files && e.target.files[0]) {
             processImage(e.target.files[0])
         }
     }
 
     const processImage = (file: File) => {
-        if (!file.type.match("image.*")) {
-            alert("Please select an image file")
+        if (!file.type.startsWith("image/")) { // More robust check
+            alert("Please select an image file (e.g., PNG, JPG, GIF).")
             return
         }
 
         const reader = new FileReader()
-        reader.onload = async (e) => {
-            if (e.target?.result) {
+        reader.onload = async (loadEvent) => { // Typed event for FileReader
+            if (loadEvent.target?.result) {
+                const imgSrcDataUrl = loadEvent.target.result as string;
                 const img = new Image()
                 img.onload = async () => {
-                    // Create a canvas to get image data
                     const canvas = document.createElement("canvas")
                     const ctx = canvas.getContext("2d")
 
                     if (!ctx) {
                         console.error("Could not get canvas context")
+                        // Potentially call an error handler passed via props
                         return
                     }
 
-                    // Set canvas dimensions to match image
                     canvas.width = img.width
                     canvas.height = img.height
-
-                    // Draw image on canvas
                     ctx.drawImage(img, 0, 0)
+                    const rawImgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
-                    // Get image data
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-                    // Perform SVD on the image data (3 channels applied conversion happens inside)
-                    const svdData = await performColorSVD(imageData)
-
-                    // Pass the original image data, dimensions, and SVD data to the parent component
-                    onImageUploaded(e.target?.result as string, imageData, img.width, img.height, svdData)
+                    try {
+                        const colorSvdResult = await performColorSVD(rawImgData)
+                        onImageUploaded(imgSrcDataUrl, rawImgData, img.width, img.height, colorSvdResult)
+                    } catch (error) {
+                        console.error("SVD Processing Error:", error);
+                        alert("An error occurred during SVD processing.");
+                        // Optionally, pass error back to parent
+                        onImageUploaded(imgSrcDataUrl, rawImgData, img.width, img.height, null); // Still pass image data
+                    }
                 }
-                img.src = e.target.result as string
+                img.onerror = () => {
+                    console.error("Image load error");
+                    alert("Could not load the selected image. It might be corrupted or an unsupported format.");
+                }
+                img.src = imgSrcDataUrl;
             }
+        }
+        reader.onerror = () => {
+            console.error("File reading error");
+            alert("An error occurred while reading the file.");
         }
         reader.readAsDataURL(file)
     }
 
     return (
         <>
-            {/* <div className="h-full overflow-auto"> */}
             <Card
-                className={`border-2 border-dashed ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/20"
-                    } transition-colors duration-200 cursor-pointer`}
-                onClick={() => fileInputRef.current?.click()}
+                className={`
+                    border-2 border-dashed 
+                    ${isDragging && !disabled ? "border-primary bg-primary/10" : "border-muted-foreground/20 hover:border-muted-foreground/40"}
+                    ${disabled ? "cursor-not-allowed bg-muted/20" : "cursor-pointer"}
+                    transition-colors duration-200
+                    w-full max-w-md mx-auto rounded-lg shadow-sm`} // Constrain width and center
+                onClick={handleTriggerClick}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                role={disabled ? undefined : "button"}
+                tabIndex={disabled ? -1 : 0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleTriggerClick(); }}
             >
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="mb-4 rounded-full bg-muted p-6">
-                        {isDragging ? (
-                            <ImageIcon className="h-10 w-10 text-primary" />
+                <CardContent className="flex flex-col items-center justify-center text-center p-6 sm:p-8"> {/* Reduced padding */}
+                    <div className={`mb-3 rounded-full p-4 ${disabled ? 'bg-muted/50' : 'bg-muted group-hover:bg-muted/80'}`}> {/* Reduced icon padding and margin */}
+                        {isDragging && !disabled ? (
+                            <ImageIcon className="h-8 w-8 text-primary" /> // Smaller icon
                         ) : (
-                            <Upload className="h-10 w-10 text-muted-foreground" />
+                            <Upload className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} /> // Smaller icon
                         )}
                     </div>
-                    <div className="mb-2 text-xl font-medium">{isDragging ? "Drop image here" : "Upload an image"}</div>
-                    <p className="mb-4 text-sm text-muted-foreground max-w-xs">
-                        Drag and drop an image file here, or click to select a file
+                    <div className={`mb-1 text-lg font-medium ${disabled ? 'text-muted-foreground/70' : ''}`}> {/* Reduced margin */}
+                        {isDragging && !disabled ? "Drop image here" : "Upload an image"}
+                    </div>
+                    <p className={`mb-3 text-xs sm:text-sm text-muted-foreground max-w-xs ${disabled ? 'text-muted-foreground/70' : ''}`}> {/* Reduced margin & text size */}
+                        Drag & drop or click to select a file
                     </p>
-                    <Button variant="outline" size="sm">
-                        Select Image
-                    </Button>
+                    {!disabled && (
+                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs sm:text-sm"> {/* Smaller button */}
+                            Select Image
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-            {/* </div> */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*" // Be more specific if needed, e.g., "image/png, image/jpeg"
+                className="hidden"
+                disabled={disabled}
+            />
         </>
     )
 }
