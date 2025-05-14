@@ -13,6 +13,7 @@ import InteractiveImageDisplay from "@/components/interactive-image-display"
 import { performSVD } from "@/lib/svd"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import SvdAnalysis from "@/components/svd-analysis"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 
 export default function Home() {
     const [imageData, setImageData] = useState<{
@@ -39,6 +40,8 @@ export default function Home() {
     const [activeTab, setActiveTab] = useState<string>("visualization")
     const [graySvd, setGraySvd] = useState<SvdData | null>(null);
     const [useColor, setUseColor] = useState<boolean>(true)
+    const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
+
 
     // when user toggles off color, compute grayscale once
     useEffect(() => {
@@ -108,12 +111,22 @@ export default function Home() {
 
     }, [imageData, singularValuesUsed, useColor, maxKForCurrentMode]);
 
+    const sampleImages = [
+        { id: 'sample_goose', name: 'Goose', thumbnailUrl: '/images/samples/goose_thumb.jpg', fullUrl: '/images/samples/goose_full.jpg' },
+        { id: 'sample_cat', name: 'Cat', thumbnailUrl: '/images/samples/cat_thumb.jpg', fullUrl: '/images/samples/cat_full.jpg' },
+        { id: 'sample_dog', name: 'Dog', thumbnailUrl: '/images/samples/dog_thumb.jpg', fullUrl: '/images/samples/dog_full.jpg' },
+        { id: 'sample_landscape', name: 'Landscape', thumbnailUrl: '/images/samples/landscape_thumb.jpg', fullUrl: '/images/samples/landscape_full.jpg' },
+        { id: 'sample_abstract', name: 'Abstract', thumbnailUrl: '/images/samples/abstract_thumb.jpg', fullUrl: '/images/samples/abstract_full.jpg' },
+        { id: 'sample_lena', name: 'Lena', thumbnailUrl: '/images/samples/lena_thumb.png', fullUrl: '/images/samples/lena_full.png' },
+    ];
+
+
     return (
         <div className="h-screen w-full p-2">
             <ResizablePanelGroup direction="horizontal" className="flex h-full w-full rounded-lg border"
             >
                 {/* Left Panel - Controls */}
-                <ResizablePanel defaultSize={15} minSize={20}>
+                <ResizablePanel defaultSize={15} minSize={15} maxSize={20}>
                     {/* <div className="h-full overflow-auto"> */}
                     <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
                         <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
@@ -123,22 +136,60 @@ export default function Home() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"> {/* CONTENT IS SCROLLABLE AND EXPANDS */}
-                            <ImageUpload
-                                onImageUploaded={(imageData, rawImageData, width, height, svdData) => {
-                                    setImageData({
-                                        originalImage: imageData,
-                                        rawImageData,
-                                        width,
-                                        height,
-                                        svdData,
-                                    })
-                                    setSingularValuesUsed(svdData ? svdData.r.s.length : 0)
-                                    imageData && setGraySvd(null)
-                                }}
-                            />
-                        </CardContent>
+                            <div className="flex-shrink-0"> {/* Upload component doesn't grow excessively */}
 
-                        {/* // TODO list some photos */}
+                                <ImageUpload
+                                    onImageUploaded={(imageData, rawImageData, width, height, svdData) => {
+                                        setImageData({
+                                            originalImage: imageData,
+                                            rawImageData,
+                                            width,
+                                            height,
+                                            svdData,
+                                        })
+                                        setSingularValuesUsed(svdData ? svdData.r.s.length : 0)
+                                        imageData && setGraySvd(null)
+                                    }}
+                                />
+                            </div>
+
+                            <hr className="border-border my-2 flex-shrink-0" />
+
+                            {/* Section 2: Sample Images */}
+                            <div className="flex-1 flex flex-col min-h-0"> {/* Allows this div to grow */}
+                                <ScrollArea className="flex-grow rounded-md border">
+                                    <div className="p-2 grid grid-cols-2 xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-2"> {/* Responsive grid for samples */}
+                                        {sampleImages.map((sample) => (
+                                            <div
+                                                key={sample.id}
+                                                className={`flex flex-col items-center text-center p-2 rounded-lg border-2 
+                                            ${selectedSampleId === sample.id ? 'border-primary bg-primary/10 shadow-md' : 'border-transparent hover:border-muted-foreground/20 hover:bg-muted/30'} 
+                                            cursor-pointer transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                                                // onClick={() => handleSampleImageClick(sample)}
+                                                role="button"
+                                                tabIndex={0}
+                                                // onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !isUploading && !isSvdProcessing) handleSampleImageClick(sample); }}
+                                                aria-pressed={selectedSampleId === sample.id}
+                                                aria-label={`Select sample image: ${sample.name}`}
+                                            >
+                                                <img
+                                                    src={sample.thumbnailUrl}
+                                                    alt={sample.name}
+                                                    className="h-20 w-20 xs:h-16 xs:w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 lg:h-20 lg:w-20 rounded-md object-cover mb-1.5 border bg-slate-200" // Larger, responsive thumbnails
+                                                />
+                                                <span className="text-xs font-medium text-foreground truncate w-full px-1">
+                                                    {sample.name}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {sampleImages.length === 0 && (
+                                            <p className="col-span-full text-xs text-muted-foreground text-center py-4">No sample images configured.</p>
+                                        )}
+                                    </div>
+                                    <ScrollBar orientation="vertical" />
+                                </ScrollArea>
+                            </div>
+                        </CardContent>
                     </Card>
                     {/* </div> */}
                 </ResizablePanel>
@@ -146,7 +197,7 @@ export default function Home() {
                 <ResizableHandle withHandle />
 
                 {/* Middle Panel - Original Image */}
-                <ResizablePanel defaultSize={25} minSize={30}>
+                <ResizablePanel defaultSize={15} minSize={25} maxSize={35}>
                     {/* <div className="h-full overflow-auto"> */}
                     <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
                         <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}

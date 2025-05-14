@@ -109,7 +109,7 @@ function transpose(A: number[][]): number[][] {
  * Multiply A(m×p) × B(p×n) ➔ C(m×n)
  * Handles empty inputs gracefully.
  */
-function multiplyMatrices(A: number[][], B: number[][]): number[][] {
+export function multiplyMatrices(A: number[][], B: number[][]): number[][] {
     if (A.length === 0 || B.length === 0) return [];
     const m = A.length;
     const p = A[0]?.length ?? 0;
@@ -332,4 +332,24 @@ export async function reconstructGrayImage(
         }
     }
     return img;
+}
+
+export function multiplyMatrixByDiagonal(matrix: number[][], diagonal: number[]): number[][] {
+    // Assumes matrix is M x K and diagonal is K
+    // Multiplies each column j of matrix by diagonal[j]
+    const M = matrix.length;
+    const K = matrix[0]?.length || 0;
+    if (K !== diagonal.length) {
+        // Or K should be Math.min(matrix[0].length, diagonal.length)
+        console.warn("Matrix columns and diagonal length mismatch for S multiplication.");
+        // Fallback or throw error depending on desired strictness
+    }
+    const result: number[][] = [];
+    for (let i = 0; i < M; i++) {
+        result[i] = [];
+        for (let j = 0; j < K; j++) {
+            result[i][j] = (matrix[i]?.[j] ?? 0) * (diagonal[j] ?? 0);
+        }
+    }
+    return result;
 }

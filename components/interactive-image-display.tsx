@@ -64,13 +64,6 @@ export default function InteractiveImageDisplay({
                 const ctx = canvas.getContext("2d")
                 if (!ctx) return
 
-                // Calculate compression ratio
-                const totalPixels = width * height
-                const usedValues = 1
-                const usedInfo = useColor ? usedValues * 3 * (width + height) : usedValues * (width + height)
-                const ratio = (totalPixels / usedInfo) * 100
-                setCompressionRatio(ratio)
-
                 // Create reconstructed matrices for each channel
                 if (useColor && svdData.color) {
                     const reconstructedImageData = await reconstructColorImage(svdData.color, singularValuesUsed, width, height)
@@ -119,6 +112,14 @@ export default function InteractiveImageDisplay({
             link.click()
             document.body.removeChild(link)
         }
+    }
+
+    const shouldShowPreset = (presetValue: number, index: number, screenWidth: number) => {
+        if (screenWidth < 640) { // Example: 'sm' breakpoint
+            // Only show first, last, and maybe one middle preset on small screens
+            return index === 0 || presetValue === maxSingularValues || index === Math.floor(presets.length / 2);
+        }
+        return true; // Show all on larger screens
     }
 
     // Calculate preset values for the slider
@@ -194,31 +195,32 @@ export default function InteractiveImageDisplay({
                 </div>
 
                 {/* Presets and controls */}
-                <div className="flex justify-between items-center">
-                    <div className="flex flex-wrap gap-1">
-                        {presets.map((presetValue) => (
-                            <Button
-                                key={presetValue}
-                                variant={singularValuesUsed === presetValue ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setSingularValuesUsed(presetValue)}
-                                disabled={isProcessing}
-                                className="h-7 px-2 text-xs"
-                            >
-                                {presetValue === 1
-                                    ? "1"
-                                    : presetValue === maxSingularValues
-                                        ? "All"
-                                        : `${Math.round((presetValue / maxSingularValues) * 100)}%`}
-                            </Button>
-                        ))}
+                <div className="flex flex-col xs:flex-row xs:justify-between items-center gap-y-2 xs:gap-x-3">
+                    <div className="flex-1 min-w-0 order-1 xs:order-none"> {/* Presets take available space */}
+                        <div className="flex flex-wrap gap-1.5 justify-center xs:justify-start">
+                            {presets.filter((val, idx) => shouldShowPreset(val, idx, window.innerWidth)).map((presetValue) => (
+                                <Button
+                                    key={presetValue}
+                                    variant={singularValuesUsed === presetValue ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setSingularValuesUsed(presetValue)}
+                                    disabled={isProcessing}
+                                    className="h-7 px-2 text-xs"
+                                >
+                                    {presetValue === 1
+                                        ? "1"
+                                        : presetValue === maxSingularValues
+                                            ? "All"
+                                            : `${Math.round((presetValue / maxSingularValues) * 100)}%`}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 order-2 xs:order-none">
                         <Button
                             variant="outline"
                             size="sm"
-                            // onClick={() => alert(!useColor)}
                             onClick={() => setUseColor(!useColor)}  // pass a boolean, not a function
                             disabled={isProcessing}
                             className="h-7"
@@ -234,13 +236,13 @@ export default function InteractiveImageDisplay({
                 </div>
 
                 {/* Compression info */}
-                {compressionRatio > 0 && (
+                {/* {compressionRatio > 0 && (
                     <div className="mt-2 text-xs text-muted-foreground">
                         Compression ratio: {compressionRatio.toFixed(2)}x | Using {singularValuesUsed} of {maxSingularValues}{" "}
                         singular values
                         {useColor ? " (applied to R,G,B channels)" : ""}
                     </div>
-                )}
+                )} */}
             </div>
         </div>
     )
