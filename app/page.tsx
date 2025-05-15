@@ -1,42 +1,21 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import ImageUpload from "@/components/image-upload"
-import ImageDisplay from "@/components/image-display"
-import SvdSlider from "@/components/svd-slider"
-import { Button } from "@/components/ui/button"
-import { Info } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ColorSvdData, ImageDataState, SvdData } from "@/lib/utils"
+import { ImageDataState, SvdData } from "@/lib/utils"
 import InteractiveImageDisplay from "@/components/interactive-image-display"
-import { performSVD } from "@/lib/svd"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import SvdAnalysis from "@/components/svd-analysis"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import ImageSelectionPanel from "@/components/image-selection-panel"
 
 
 export default function Home() {
     const [imageData, setImageData] = useState<ImageDataState>()
-    const [reconstructedImage, setReconstructedImage] = useState<string | null>(null)
     const [singularValuesUsed, setSingularValuesUsed] = useState<number>(0)
     const [isProcessing, setIsProcessing] = useState<boolean>(false)
-    const [activeTab, setActiveTab] = useState<string>("visualization")
     const [graySvd, setGraySvd] = useState<SvdData | null>(null);
     const [useColor, setUseColor] = useState<boolean>(true)
 
-
-    // when user toggles off color, compute grayscale once
-    useEffect(() => {
-        if (!useColor && graySvd === null && imageData?.rawImageData) {
-            console.log("Computing grayscale SVD " + useColor)
-            setIsProcessing(true)
-            performSVD(imageData.rawImageData)
-                .then(g => setGraySvd(g))
-                .finally(() => setIsProcessing(false))
-        }
-    }, [useColor, graySvd])
 
     // 1. Calculate totalPixels
     const totalPixels = useMemo(() => {
@@ -154,34 +133,30 @@ export default function Home() {
                                     setSingularValuesUsed={setSingularValuesUsed}
                                     useColor={useColor}
                                     setUseColor={setUseColor}
+                                    imageDataState={imageData}
+                                    setGraySvd={setGraySvd}
                                 />
                             </div>
 
-                            {imageData && ( // Only show info if there's image data
-                                <div className="mt-auto pt-4 border-t border-border flex-shrink-0 text-xs"> {/* mt-auto pushes to bottom if space */}
-                                    <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Image & SVD Details:</h4>
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5"> {/* Increased gap-y */}
-                                        <div><span className="font-medium">Dimensions:</span></div>
-                                        <div>{imageData.width} × {imageData.height} px</div>
-
-                                        <div><span className="font-medium">Total Pixels:</span></div>
-                                        <div>{totalPixels.toLocaleString()}</div>
-
-                                        <div><span className="font-medium">Mode:</span></div>
-                                        <div>{useColor ? "Color (RGB)" : "Grayscale"}</div>
-
-                                        <div><span className="font-medium">Singular Values (k):</span></div>
-                                        <div>
-                                            {singularValuesUsed} / {maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}
-                                        </div>
-
-                                        <div><span className="font-medium">Compression Ratio:</span></div>
-                                        <div>
-                                            {compressionRatioForCurrentK > 0 ? `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")}
-                                        </div>
+                            <div className="mt-auto pt-4 border-t border-border flex-shrink-0 text-xs"> {/* mt-auto pushes to bottom if space */}
+                                <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Image & SVD Details:</h4>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5"> {/* Increased gap-y */}
+                                    <div><span className="font-medium">Dimensions:</span></div>
+                                    <div>{imageData ? `${imageData.width} × ${imageData.height} px` : "-"}</div>
+                                    <div><span className="font-medium">Total Pixels:</span></div>
+                                    <div>{imageData ? totalPixels.toLocaleString() : "-"}</div>
+                                    <div><span className="font-medium">Mode:</span></div>
+                                    <div>{imageData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
+                                    <div><span className="font-medium">Singular Values (k):</span></div>
+                                    <div>
+                                        {imageData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}
+                                    </div>
+                                    <div><span className="font-medium">Compression Ratio:</span></div>
+                                    <div>
+                                        {imageData ? (compressionRatioForCurrentK > 0 ? `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </CardContent>
                     </Card>
                     {/* </div> */}

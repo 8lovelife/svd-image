@@ -5,8 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Download, ImageIcon } from "lucide-react"
-import { ColorSvdData, SvdData } from "@/lib/utils"
-import { reconstructColor, reconstructColorImage, reconstructGrayImage, reconstructImage } from "@/lib/svd"
+import { ColorSvdData, ImageDataState, SvdData } from "@/lib/utils"
+import { performSVD, reconstructColor, reconstructColorImage, reconstructGrayImage, reconstructImage } from "@/lib/svd"
 
 interface InteractiveImageDisplayProps {
     originalImage: string | null
@@ -16,11 +16,13 @@ interface InteractiveImageDisplayProps {
     } | null
     width: number
     height: number
-    isLoading?: boolean
+    isLoadingSvd: boolean
     singularValuesUsed: number
     setSingularValuesUsed: (value: number) => void
     useColor: boolean
     setUseColor: (value: boolean) => void
+    imageDataState: ImageDataState
+    setGraySvd: (svdData: SvdData | null) => void
 }
 
 export default function InteractiveImageDisplay({
@@ -28,11 +30,13 @@ export default function InteractiveImageDisplay({
     svdData,
     width,
     height,
-    isLoading,
+    isLoadingSvd,
     singularValuesUsed,
     setSingularValuesUsed,
     useColor,
-    setUseColor
+    setUseColor,
+    imageDataState,
+    setGraySvd
 }: InteractiveImageDisplayProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     // const [singularValuesUsed, setSingularValuesUsed] = useState<number>(0)
@@ -57,9 +61,11 @@ export default function InteractiveImageDisplay({
     // Update the canvas when parameters change
     useEffect(() => {
         const updateCanvas = async () => {
+
             if (!svdData || !canvasRef.current) return
-            setIsProcessing(true)
             try {
+                setIsProcessing(true)
+
                 const canvas = canvasRef.current
                 const ctx = canvas.getContext("2d")
                 if (!ctx) return
@@ -69,14 +75,15 @@ export default function InteractiveImageDisplay({
                     const reconstructedImageData = await reconstructColorImage(svdData.color, singularValuesUsed, width, height)
                     ctx.clearRect(0, 0, width, height);
                     ctx.putImageData(reconstructedImageData, 0, 0);
-                } else if (!useColor && svdData.grayscale) {
-                    const reconstructedImageData = await reconstructGrayImage(svdData.grayscale, singularValuesUsed, width, height)
+                } else if (!useColor && imageDataState.rawImageData) {
+                    const grayscale = await performSVD(imageDataState.rawImageData);
+                    setGraySvd(grayscale)
+                    const reconstructedImageData = await reconstructGrayImage(grayscale, singularValuesUsed, width, height)
                     ctx.clearRect(0, 0, width, height);
                     ctx.putImageData(reconstructedImageData, 0, 0);
                 }
             } catch (error) {
                 console.error("Error updating canvas:", error)
-
                 // If there's an error, try to show the original image
                 if (originalImage && canvasRef.current) {
                     const canvas = canvasRef.current
@@ -95,7 +102,7 @@ export default function InteractiveImageDisplay({
         }
 
         updateCanvas()
-    }, [svdData, singularValuesUsed, useColor, originalImage, width, height])
+    }, [singularValuesUsed, useColor, originalImage])
 
     // Handle slider change
     const handleSliderChange = (newValue: number[]) => {
@@ -137,7 +144,7 @@ export default function InteractiveImageDisplay({
         ].filter((v, i, a) => v > 0 && a.indexOf(v) === i)
     })()
 
-    if (isLoading) {
+    if (isLoadingSvd) {
         return (
             <div className="relative flex items-center justify-center">
                 <Skeleton className="w-full aspect-[4/3]" />

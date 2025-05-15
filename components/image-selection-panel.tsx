@@ -71,7 +71,6 @@ export default function ImageSelectionPanel({
 
     // This is the internal processing logic as per your last full snippet for ImageSelectionPanel
     const processImageAndCallBack = (file: File) => {
-        setIsProcessing(true); // Set loading state in parent
         // This component itself does not set a global isLoading flag via props,
         // it relies on the parent's isLoading prop to disable its UI.
         // The onImageLoaded callback signals completion (or failure) to the parent.
@@ -82,6 +81,7 @@ export default function ImageSelectionPanel({
         }
         const reader = new FileReader();
         reader.onload = async (loadEvent) => {
+            setIsProcessing(true);
             if (loadEvent.target?.result) {
                 const imgSrcDataUrl = loadEvent.target.result as string;
                 const img = new Image();
@@ -90,7 +90,8 @@ export default function ImageSelectionPanel({
                     const ctx = canvas.getContext("2d");
                     if (!ctx) {
                         console.error("Could not get canvas context");
-                        onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), img.width, img.height, null);
+                        alert("Could not get canvas context");
+                        // onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), img.width, img.height, null);
                         return;
                     }
                     canvas.width = img.width;
@@ -103,13 +104,13 @@ export default function ImageSelectionPanel({
                     } catch (error) {
                         console.error("SVD Processing Error in Panel:", error);
                         alert("An error occurred during SVD processing within selection panel.");
-                        onImageLoaded(imgSrcDataUrl, rawImgData, img.width, img.height, null);
+                        // onImageLoaded(imgSrcDataUrl, rawImgData, img.width, img.height, null);
                     }
                 };
                 img.onerror = () => {
                     console.error("Image load error (Image object)");
                     alert("Could not load image data from file.");
-                    onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), 0, 0, null);
+                    // onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), 0, 0, null);
                 };
                 img.src = imgSrcDataUrl;
             } else {
