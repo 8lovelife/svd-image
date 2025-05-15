@@ -57,47 +57,46 @@ export default function ImageUpload({ processImage, disabled = false }: ImageUpl
             <Card
                 className={`
                     border-2 border-dashed 
-                    ${isDragging && !disabled ? "border-primary bg-primary/10" : "border-muted-foreground/20 hover:border-muted-foreground/40"}
-                    ${disabled ? "cursor-not-allowed bg-muted/20" : "cursor-pointer"}
-                    transition-colors duration-200
-                    w-full max-w-md mx-auto rounded-lg shadow-sm`} // Constrain width and center
+                    ${isDragging && !disabled ? "border-primary bg-primary/5 dark:bg-primary/10" : "border-muted-foreground/10 hover:border-muted-foreground/20 dark:border-muted-foreground/20 dark:hover:border-muted-foreground/30"}
+                    ${disabled ? "cursor-not-allowed bg-muted/10 dark:bg-muted/20" : "cursor-pointer"}
+                    transition-colors duration-150 
+                    w-full max-w-xs mx-auto rounded-md shadow-sm`}
                 onClick={handleTriggerClick}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 role={disabled ? undefined : "button"}
                 tabIndex={disabled ? -1 : 0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleTriggerClick(); }}
             >
-                <CardContent className="flex flex-col items-center justify-center text-center p-6 sm:p-8"> {/* Reduced padding */}
-                    <div className={`mb-3 rounded-full p-4 ${disabled ? 'bg-muted/50' : 'bg-muted group-hover:bg-muted/80'}`}> {/* Reduced icon padding and margin */}
+                <CardContent className="flex flex-col items-center justify-center text-center p-3 sm:p-4"> {/* Significantly reduced padding */}
+                    <div className={`mb-1 rounded-full p-2 ${disabled ? 'bg-muted/30 dark:bg-muted/50' : 'bg-muted/50 dark:bg-muted/70 group-hover:bg-muted/70 dark:group-hover:bg-muted/90'}`}> {/* Reduced margin and padding for icon wrapper */}
                         {isDragging && !disabled ? (
-                            <ImageIcon className="h-8 w-8 text-primary" /> // Smaller icon
+                            <ImageIcon className="h-5 w-5 text-primary" />
                         ) : (
-                            <Upload className={`h-8 w-8 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} /> // Smaller icon
+                            <Upload className={`h-5 w-5 ${disabled ? 'text-muted-foreground/30 dark:text-muted-foreground/40' : 'text-muted-foreground/70 dark:text-muted-foreground/60'}`} />
                         )}
                     </div>
-                    <div className={`mb-1 text-lg font-medium ${disabled ? 'text-muted-foreground/70' : ''}`}> {/* Reduced margin */}
-                        {isDragging && !disabled ? "Drop image here" : "Upload an image"}
+                    <div className={`mb-0.5 text-sm font-medium ${disabled ? 'text-muted-foreground/50 dark:text-muted-foreground/60' : 'text-foreground'}`}> {/* Smaller font, tiny margin */}
+                        {isDragging && !disabled ? "Drop here" : "Upload File"} {/* Shorter text */}
                     </div>
-                    <p className={`mb-3 text-xs sm:text-sm text-muted-foreground max-w-xs ${disabled ? 'text-muted-foreground/70' : ''}`}> {/* Reduced margin & text size */}
-                        Drag & drop or click to select a file
+                    <p className={`text-xs text-muted-foreground/80 dark:text-muted-foreground/70 max-w-[90%] ${disabled ? 'opacity-50' : ''} ${!disabled ? 'mb-1.5' : ''}`}> {/* Even smaller text, slight margin before button */}
+                        Drag & drop or click
                     </p>
-                    {!disabled && (
-                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs sm:text-sm"> {/* Smaller button */}
-                            Select Image
+                    {/* {!disabled && (
+                        <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs leading-tight"> 
+                            Select
                         </Button>
-                    )}
+                    )} */}
                 </CardContent>
             </Card>
             <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/*" // Be more specific if needed, e.g., "image/png, image/jpeg"
+                accept="image/png, image/jpeg, image/gif, image/webp"
                 className="hidden"
                 disabled={disabled}
             />
         </>
-    )
+    );
 }

@@ -105,7 +105,7 @@ export function SingularValuesAreaChartGrayscale({
     return (
         <>
             {svgGradientDefinition}
-            <ChartContainer config={chartConfigGrayscale} className="min-h-[300px] w-full">
+            <ChartContainer config={chartConfigGrayscale} className="flex-grow w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <RechartsAreaChart
                         data={chartData}

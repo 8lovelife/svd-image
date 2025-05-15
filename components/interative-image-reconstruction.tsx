@@ -10,11 +10,11 @@ import InteractiveImageDisplay from "./interactive-image-display";
 
 
 interface ImageReconstructionProps {
-    imageData: ImageDataState
+    imageData?: ImageDataState
     isProcessing: boolean
+    setProcessSvd: (isProcessing: boolean) => void
     useColor: boolean
     setUseColor: (value: boolean) => void
-    imageDataState: ImageDataState
     setGraySvd: (svdData: SvdData | null) => void
     graySvd: SvdData | null
     singularValuesUsed: number
@@ -25,6 +25,7 @@ interface ImageReconstructionProps {
 export default function InterativeImageReconstruction({
     imageData,
     isProcessing,
+    setProcessSvd,
     useColor,
     setUseColor,
     setGraySvd,
@@ -121,6 +122,7 @@ export default function InterativeImageReconstruction({
                         setUseColor={setUseColor}
                         imageDataState={imageData}
                         setGraySvd={setGraySvd}
+                        setProcessSvd={setProcessSvd}
                     />
                 </div>
 

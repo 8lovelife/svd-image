@@ -8,8 +8,8 @@ import { SvdMatrixVisualizer } from "./svd-matrix";
 
 interface SvdAnalysisProps {
     svdData: {
-        grayscale?: SvdData;
-        color?: ColorSvdData;
+        grayscale?: SvdData | null;
+        color?: ColorSvdData | null;
     } | null;
     usedValues: number;
     useColor: boolean;
