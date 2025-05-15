@@ -8,44 +8,28 @@ import SvdSlider from "@/components/svd-slider"
 import { Button } from "@/components/ui/button"
 import { Info } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ColorSvdData, SvdData } from "@/lib/utils"
+import { ColorSvdData, ImageDataState, SvdData } from "@/lib/utils"
 import InteractiveImageDisplay from "@/components/interactive-image-display"
 import { performSVD } from "@/lib/svd"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import SvdAnalysis from "@/components/svd-analysis"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
+import ImageSelectionPanel from "@/components/image-selection-panel"
+
 
 export default function Home() {
-    const [imageData, setImageData] = useState<{
-        originalImage: string | null
-        rawImageData: ImageData | null
-        width: number
-        height: number
-        svdData: {
-            r: SvdData
-            g: SvdData
-            b: SvdData
-        } | null
-    }>({
-        originalImage: null,
-        rawImageData: null,
-        width: 0,
-        height: 0,
-        svdData: null,
-    })
-
+    const [imageData, setImageData] = useState<ImageDataState>()
     const [reconstructedImage, setReconstructedImage] = useState<string | null>(null)
     const [singularValuesUsed, setSingularValuesUsed] = useState<number>(0)
     const [isProcessing, setIsProcessing] = useState<boolean>(false)
     const [activeTab, setActiveTab] = useState<string>("visualization")
     const [graySvd, setGraySvd] = useState<SvdData | null>(null);
     const [useColor, setUseColor] = useState<boolean>(true)
-    const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
 
 
     // when user toggles off color, compute grayscale once
     useEffect(() => {
-        if (!useColor && graySvd === null && imageData.rawImageData) {
+        if (!useColor && graySvd === null && imageData?.rawImageData) {
             console.log("Computing grayscale SVD " + useColor)
             setIsProcessing(true)
             performSVD(imageData.rawImageData)
@@ -111,14 +95,7 @@ export default function Home() {
 
     }, [imageData, singularValuesUsed, useColor, maxKForCurrentMode]);
 
-    const sampleImages = [
-        { id: 'sample_goose', name: 'Goose', thumbnailUrl: '/images/samples/goose_thumb.jpg', fullUrl: '/images/samples/goose_full.jpg' },
-        { id: 'sample_cat', name: 'Cat', thumbnailUrl: '/images/samples/cat_thumb.jpg', fullUrl: '/images/samples/cat_full.jpg' },
-        { id: 'sample_dog', name: 'Dog', thumbnailUrl: '/images/samples/dog_thumb.jpg', fullUrl: '/images/samples/dog_full.jpg' },
-        { id: 'sample_landscape', name: 'Landscape', thumbnailUrl: '/images/samples/landscape_thumb.jpg', fullUrl: '/images/samples/landscape_full.jpg' },
-        { id: 'sample_abstract', name: 'Abstract', thumbnailUrl: '/images/samples/abstract_thumb.jpg', fullUrl: '/images/samples/abstract_full.jpg' },
-        { id: 'sample_lena', name: 'Lena', thumbnailUrl: '/images/samples/lena_thumb.png', fullUrl: '/images/samples/lena_full.png' },
-    ];
+
 
 
     return (
@@ -127,71 +104,22 @@ export default function Home() {
             >
                 {/* Left Panel - Controls */}
                 <ResizablePanel defaultSize={15} minSize={15} maxSize={20}>
-                    {/* <div className="h-full overflow-auto"> */}
-                    <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
-                        <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
-                            <CardTitle>SVD Image Dimension Reduction</CardTitle>
-                            <CardDescription>
-                                Upload an image to analyze with Singular Value Decomposition (SVD) and adjust dimensions
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"> {/* CONTENT IS SCROLLABLE AND EXPANDS */}
-                            <div className="flex-shrink-0"> {/* Upload component doesn't grow excessively */}
-
-                                <ImageUpload
-                                    onImageUploaded={(imageData, rawImageData, width, height, svdData) => {
-                                        setImageData({
-                                            originalImage: imageData,
-                                            rawImageData,
-                                            width,
-                                            height,
-                                            svdData,
-                                        })
-                                        setSingularValuesUsed(svdData ? svdData.r.s.length : 0)
-                                        imageData && setGraySvd(null)
-                                    }}
-                                />
-                            </div>
-
-                            <hr className="border-border my-2 flex-shrink-0" />
-
-                            {/* Section 2: Sample Images */}
-                            <div className="flex-1 flex flex-col min-h-0"> {/* Allows this div to grow */}
-                                <ScrollArea className="flex-grow rounded-md border">
-                                    <div className="p-2 grid grid-cols-2 xs:grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-2"> {/* Responsive grid for samples */}
-                                        {sampleImages.map((sample) => (
-                                            <div
-                                                key={sample.id}
-                                                className={`flex flex-col items-center text-center p-2 rounded-lg border-2 
-                                            ${selectedSampleId === sample.id ? 'border-primary bg-primary/10 shadow-md' : 'border-transparent hover:border-muted-foreground/20 hover:bg-muted/30'} 
-                                            cursor-pointer transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-                                                // onClick={() => handleSampleImageClick(sample)}
-                                                role="button"
-                                                tabIndex={0}
-                                                // onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !isUploading && !isSvdProcessing) handleSampleImageClick(sample); }}
-                                                aria-pressed={selectedSampleId === sample.id}
-                                                aria-label={`Select sample image: ${sample.name}`}
-                                            >
-                                                <img
-                                                    src={sample.thumbnailUrl}
-                                                    alt={sample.name}
-                                                    className="h-20 w-20 xs:h-16 xs:w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 lg:h-20 lg:w-20 rounded-md object-cover mb-1.5 border bg-slate-200" // Larger, responsive thumbnails
-                                                />
-                                                <span className="text-xs font-medium text-foreground truncate w-full px-1">
-                                                    {sample.name}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {sampleImages.length === 0 && (
-                                            <p className="col-span-full text-xs text-muted-foreground text-center py-4">No sample images configured.</p>
-                                        )}
-                                    </div>
-                                    <ScrollBar orientation="vertical" />
-                                </ScrollArea>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    {/* </div> */}
+                    <ImageSelectionPanel onImageLoaded={(imageData, rawImageData, width, height, svdData) => {
+                        if (svdData) {
+                            setImageData({
+                                originalImage: imageData,
+                                rawImageData,
+                                width,
+                                height,
+                                svdData,
+                            })
+                            setSingularValuesUsed(svdData.r.s.length)
+                        }
+                        imageData && setGraySvd(null)
+                    }}
+                        isLoading={isProcessing}
+                        setIsProcessing={setIsProcessing}
+                    />
                 </ResizablePanel>
 
                 <ResizableHandle withHandle />
@@ -208,11 +136,10 @@ export default function Home() {
                         </CardHeader>
                         <CardContent className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"> {/* CONTENT IS SCROLLABLE AND EXPANDS */}
                             <div className="flex-grow">
-
                                 <InteractiveImageDisplay
-                                    originalImage={imageData.originalImage}
+                                    originalImage={imageData?.originalImage || null}
                                     svdData={
-                                        imageData.svdData
+                                        imageData?.svdData
                                             ? (
                                                 useColor
                                                     ? { color: imageData.svdData }
@@ -220,9 +147,9 @@ export default function Home() {
                                             )
                                             : null
                                     }
-                                    width={imageData.width}
-                                    height={imageData.height}
-                                    isLoading={isProcessing}
+                                    width={imageData?.width || 0}
+                                    height={imageData?.height || 0}
+                                    isLoadingSvd={isProcessing}
                                     singularValuesUsed={singularValuesUsed}
                                     setSingularValuesUsed={setSingularValuesUsed}
                                     useColor={useColor}
@@ -267,7 +194,7 @@ export default function Home() {
                     <SvdAnalysis
                         svdData={
                             useColor
-                                ? { color: imageData.svdData }
+                                ? { color: imageData?.svdData }
                                 : { grayscale: graySvd }
                         }
                         usedValues={singularValuesUsed}
@@ -275,92 +202,6 @@ export default function Home() {
                     />
                 </ResizablePanel>
             </ResizablePanelGroup>
-        </div>
-    )
-}
-
-function SingularValueChart({ values, usedValues }: { values: number[]; usedValues: number }) {
-    // Simple bar chart visualization of singular values
-    const maxValue = Math.max(...values)
-
-    return (
-        <div className="flex items-end h-full gap-1">
-            {values.map((value, index) => (
-                <div key={index} className="relative flex-1" style={{ height: "100%" }}>
-                    <div
-                        className={`absolute bottom-0 w-full ${index < usedValues ? "bg-primary" : "bg-muted"}`}
-                        style={{
-                            height: `${(value / maxValue) * 100}%`,
-                            minHeight: "1px",
-                        }}
-                    />
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function SingularValueRGBChart({ values, usedValues }: { values: ColorSvdData; usedValues: number }) {
-    // Simple bar chart visualization of singular values
-    const valuesR = values.r.s;
-    const maxValue = Math.max(...valuesR)
-
-    return (
-        <div className="flex items-end h-full gap-1">
-            {valuesR.map((value, index) => (
-                <div
-                    key={index}
-                    className={`p-1 border rounded ${index < usedValues ? "bg-primary/5 border-primary/20" : "bg-muted/30"}`}
-                >
-                    <div className="font-medium">S{index + 1}</div>
-                    <div className="flex flex-col">
-                        <div className="text-red-600">R: {value.toFixed(1)}</div>
-                        <div className="text-green-600">G: {values.g.s[index].toFixed(1)}</div>
-                        <div className="text-blue-600">B: {values.b.s[index].toFixed(1)}</div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function SingularValueTable({ values, usedValues }: { values: number[], usedValues: number }) {
-    return (
-        <div className="max-h-64 overflow-y-auto">
-            {/* <div className="grid grid-cols-4 gap-2 text-sm"> */}
-            {values.map((value, index) => (
-                <div
-                    key={index}
-                    className={`p-2 border rounded ${index < usedValues ? "bg-primary/10 border-primary/20" : "bg-muted/30"}`}
-                >
-                    <div className="font-medium">S{index + 1}</div>
-                    <div>{value.toFixed(2)}</div>
-                </div>
-            ))}
-            {/* </div> */}
-        </div>
-    )
-}
-
-function SingularValueRGBTable({ values, usedValues }: { values: ColorSvdData, usedValues: number }) {
-    const valuesR = values.r.s;
-    return (
-        <div className="max-h-64 overflow-y-auto">
-            {/* <div className="grid grid-cols-4 gap-2 text-sm"> */}
-            {valuesR.map((value, index) => (
-                <div
-                    key={index}
-                    className={`p-2 border rounded ${index < usedValues ? "bg-primary/10 border-primary/20" : "bg-muted/30"}`}
-                >
-                    <div className="font-medium">S{index + 1}</div>
-                    <div className="flex flex-col">
-                        <div className="text-red-600">R: {value.toFixed(1)}</div>
-                        <div className="text-green-600">G: {values.g.s[index].toFixed(1)}</div>
-                        <div className="text-blue-600">B: {values.b.s[index].toFixed(1)}</div>
-                    </div>
-                </div>
-            ))}
-            {/* </div> */}
         </div>
     )
 }

@@ -16,3 +16,11 @@ export type ColorSvdData = {
   g: SvdData
   b: SvdData
 }
+
+export type ImageDataState = {
+  originalImage: string
+  rawImageData: ImageData
+  width: number
+  height: number
+  svdData: ColorSvdData
+}

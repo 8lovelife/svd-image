@@ -10,17 +10,11 @@ import { SvdData, ColorSvdData } from "@/lib/utils" // Assuming ColorSvdData is 
 
 
 interface ImageUploadProps {
-    onImageUploaded: (
-        imageDataUrl: string, // Renamed for clarity: this is the data URL string
-        rawImageData: ImageData,
-        width: number,
-        height: number,
-        svdData: ColorSvdData | null, // Use specific ColorSvdData type
-    ) => void
+    processImage: (file: File) => void
     disabled?: boolean; // Added disabled prop
 }
 
-export default function ImageUpload({ onImageUploaded, disabled = false }: ImageUploadProps) {
+export default function ImageUpload({ processImage, disabled = false }: ImageUploadProps) {
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -56,56 +50,6 @@ export default function ImageUpload({ onImageUploaded, disabled = false }: Image
         if (e.target.files && e.target.files[0]) {
             processImage(e.target.files[0])
         }
-    }
-
-    const processImage = (file: File) => {
-        if (!file.type.startsWith("image/")) { // More robust check
-            alert("Please select an image file (e.g., PNG, JPG, GIF).")
-            return
-        }
-
-        const reader = new FileReader()
-        reader.onload = async (loadEvent) => { // Typed event for FileReader
-            if (loadEvent.target?.result) {
-                const imgSrcDataUrl = loadEvent.target.result as string;
-                const img = new Image()
-                img.onload = async () => {
-                    const canvas = document.createElement("canvas")
-                    const ctx = canvas.getContext("2d")
-
-                    if (!ctx) {
-                        console.error("Could not get canvas context")
-                        // Potentially call an error handler passed via props
-                        return
-                    }
-
-                    canvas.width = img.width
-                    canvas.height = img.height
-                    ctx.drawImage(img, 0, 0)
-                    const rawImgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-                    try {
-                        const colorSvdResult = await performColorSVD(rawImgData)
-                        onImageUploaded(imgSrcDataUrl, rawImgData, img.width, img.height, colorSvdResult)
-                    } catch (error) {
-                        console.error("SVD Processing Error:", error);
-                        alert("An error occurred during SVD processing.");
-                        // Optionally, pass error back to parent
-                        onImageUploaded(imgSrcDataUrl, rawImgData, img.width, img.height, null); // Still pass image data
-                    }
-                }
-                img.onerror = () => {
-                    console.error("Image load error");
-                    alert("Could not load the selected image. It might be corrupted or an unsupported format.");
-                }
-                img.src = imgSrcDataUrl;
-            }
-        }
-        reader.onerror = () => {
-            console.error("File reading error");
-            alert("An error occurred while reading the file.");
-        }
-        reader.readAsDataURL(file)
     }
 
     return (
