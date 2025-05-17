@@ -246,8 +246,8 @@ export default function InteractiveImageDisplay({
             payload: appSvdData?.rawImageData,
             svdChannelData: svdData,
             k: newKValue,
-            width,
-            height,
+            width: appSvdData?.rawImageData.width,
+            height: appSvdData?.rawImageData.height,
             useColor: newIsColorMode,
         });
     };
@@ -350,7 +350,16 @@ export default function InteractiveImageDisplay({
     })()
 
 
-    if (!originalImage && !isProcessing) {
+    if (isProcessing && !originalImage) {
+        return (
+            <div className="flex items-center justify-center border rounded-lg p-4 bg-muted/10 h-48">
+                <Skeleton className="h-4 w-full" />
+            </div>
+        )
+    }
+    // If no image is available, show a placeholder
+
+    if (!originalImage) {
         return (
             <div className="flex items-center justify-center border rounded-lg p-4 bg-muted/10 h-48">
                 <p className="text-muted-foreground">No image available</p>
@@ -364,18 +373,18 @@ export default function InteractiveImageDisplay({
             <div className="relative w-full overflow-hidden rounded-lg border bg-background">
                 <canvas
                     ref={canvasRef}
-                    width={width}
-                    height={height}
+                    width={appSvdData?.rawImageData.width || width}
+                    height={appSvdData?.rawImageData.height || height}
                     className="w-full h-auto object-contain block"
                     style={{ maxHeight: "40vh" }}
                 />
 
                 {/* Loading Overlay (covers canvas) */}
-                {/* {isProcessing && (
+                {isProcessing && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm z-10">
                         <div className="text-muted-foreground">Processing...</div>
                     </div>
-                )} */}
+                )}
 
             </div>
 

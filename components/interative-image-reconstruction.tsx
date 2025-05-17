@@ -39,7 +39,7 @@ export default function InterativeImageReconstruction({
     reconstructColorPixelData,
     reconstructGrayPixelData,
     initPixelData,
-    appSvdData
+    appSvdData,
 }: ImageReconstructionProps) {
 
 
@@ -51,6 +51,11 @@ export default function InterativeImageReconstruction({
         }
         return 0;
     }, [appSvdData?.rawImageData]);
+
+
+
+    const totalProcessedPixels = appSvdData ? appSvdData.rawImageData.width * appSvdData.rawImageData.height : 0;
+    const totalOriginalPixels = imageData ? imageData.width * imageData.height : 0;
 
 
     // 2. Calculate maxKForCurrentMode (Maximum possible singular values for the current mode)
@@ -139,22 +144,41 @@ export default function InterativeImageReconstruction({
                     />
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-border flex-shrink-0 text-xs"> {/* mt-auto pushes to bottom if space */}
-                    <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Image & SVD Details:</h4>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5"> {/* Increased gap-y */}
-                        <div><span className="font-medium">Dimensions:</span></div>
-                        <div>{appSvdData ? `${appSvdData.rawImageData.width} × ${appSvdData.rawImageData.height} px` : "-"}</div>
-                        <div><span className="font-medium">Total Pixels:</span></div>
-                        <div>{appSvdData ? totalPixels.toLocaleString() : "-"}</div>
-                        <div><span className="font-medium">Mode:</span></div>
-                        <div>{appSvdData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
-                        <div><span className="font-medium">Singular Values (k):</span></div>
-                        <div>
-                            {appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}
+                <div className="mt-auto pt-4 border-t border-border flex-shrink-0 text-xs">
+                    {/* <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Image & SVD Details:</h4> */}
+
+                    <div className="flex mb-3">
+                        <div className="w-1/2 pr-3 border-r border-border">
+                            <h5 className="font-medium text-center mb-2 text-primary">Original Image</h5>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                                <div className="font-medium">Dimensions:</div>
+                                <div>{imageData ? `${imageData.width} × ${imageData.height} px` : "-"}</div>
+                                <div className="font-medium">Pixels:</div>
+                                <div>{totalOriginalPixels > 0 ? totalOriginalPixels.toLocaleString() : "-"}</div>
+                            </div>
                         </div>
-                        <div><span className="font-medium">Compression Ratio:</span></div>
-                        <div>
-                            {appSvdData ? (compressionRatioForCurrentK > 0 ? `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}
+
+                        <div className="w-1/2 pl-3">
+                            <h5 className="font-medium text-center mb-2 text-primary">SVD Process</h5>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                                <div className="font-medium">Dimensions:</div>
+                                <div>{appSvdData && appSvdData.rawImageData.width ?
+                                    `${appSvdData.rawImageData.width} × ${appSvdData.rawImageData.height} px` : "-"}</div>
+                                <div className="font-medium">Pixels:</div>
+                                <div>{totalProcessedPixels > 0 ? totalProcessedPixels.toLocaleString() : "-"}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-dashed border-border pt-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            <div className="font-medium">Mode:</div>
+                            <div>{appSvdData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
+                            <div className="font-medium">Singular Values (k):</div>
+                            <div>{appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}</div>
+                            <div className="font-medium">Compression Ratio:</div>
+                            <div>{appSvdData ? (compressionRatioForCurrentK > 0 ?
+                                `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}</div>
                         </div>
                     </div>
                 </div>

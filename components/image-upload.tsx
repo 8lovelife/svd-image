@@ -46,7 +46,6 @@ export default function ImageUpload({ processImage, disabled = false }: ImageUpl
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        console.log("File changed")
         if (disabled) return;
         if (e.target.files && e.target.files[0]) {
             processImage(e.target.files[0])

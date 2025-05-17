@@ -1,7 +1,7 @@
 // svdImageUtils.ts
 
 import { SVD as exactSVD } from 'svd-js';
-import { ColorSvdData, SvdData } from './utils';
+import { ColorSvdData, RawPixelData, SvdData } from './utils';
 
 
 // -----------------------------------------------------------------------------
@@ -250,7 +250,7 @@ export function imageDataToRGBMatrices(imageData: ImageData): { R: number[][]; G
 export async function performGrayscaleSVD(
     imageData: ImageData,
     k_rank = 50,
-    p_oversampling = 15
+    p_oversampling = 5
 ): Promise<SvdData> {
     const grayMatrix = imageDataToGrayscaleMatrix(imageData);
     if (grayMatrix.length === 0 || (grayMatrix.length > 0 && grayMatrix[0].length === 0)) {
@@ -263,7 +263,7 @@ export async function performGrayscaleSVD(
 export async function performColorSVD(
     imageData: ImageData,
     k_rank = 50,
-    p_oversampling = 15
+    p_oversampling = 5
 ): Promise<ColorSvdData> {
     const { R, G, B } = imageDataToRGBMatrices(imageData);
     // Check if any channel matrix is empty

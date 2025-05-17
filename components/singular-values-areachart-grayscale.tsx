@@ -24,14 +24,6 @@ interface SingularValuesLineChartGrayscaleProps {
     usedValues: number
 }
 
-// const ACTIVE_COLOR_FILL = "hsla(222, 83%, 53%, 0.5)"; // Example: Blueish with alpha
-// const ACTIVE_COLOR_STROKE = "hsl(222, 83%, 53%)";
-
-// const INACTIVE_COLOR_FILL = "hsla(0, 100%, 50%, 0.4)"; // Red with alpha for usedValue ~ max
-// // const INACTIVE_COLOR_STROKE = "hsl(0, 100%, 50%)"; // Not used for Area stroke if one overall stroke
-
-// const BACKGROUND_COLOR_HSL = "hsl(var(--background))";
-
 
 // Active part: A medium-dark gray, relatively opaque
 const ACTIVE_COLOR_FILL = "hsl(0, 0%, 15%)";    // Dark Gray, fairly opaque
@@ -39,9 +31,6 @@ const ACTIVE_COLOR_STROKE = "hsl(0, 0%, 15%)";       // Even Darker Gray for str
 
 // Inactive part: A lighter gray, more transparent
 const INACTIVE_COLOR_FILL = "hsla(0, 0%, 50%, 0.35)"; // Medium Gray, more transparent
-
-const BACKGROUND_COLOR_HSL = "hsl(var(--background))"; // For activeDot fill (from your theme)
-
 
 const chartConfigGrayscale: ChartConfig = {
     value: { label: "Singular Value", color: ACTIVE_COLOR_STROKE }

@@ -6,6 +6,7 @@ import { SingularValuesAreaChartRGB } from "./singular-values-areachart-rgb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"; // shadcn/ui Card
 import { SvdMatrixVisualizer } from "./svd-matrix";
 import App from "next/app";
+import { CumulativeEnergyChart } from "./cumulative-energy-areachart-grascale";
 
 interface SvdAnalysisProps {
     svdData: AppSvdData | null; // SVD data for color or grayscale
@@ -52,10 +53,20 @@ export default function SvdAnalysis({
                         />
                     )}
                     {svdData && !useColor && svdData.grayscale && (
-                        <SingularValuesAreaChartGrayscale
-                            svdData={svdData.grayscale}
-                            usedValues={usedValues}
-                        />
+                        <div className="flex flex-col md:flex-row gap-4 mt-4 w-full overflow-x-hidden">
+                            <div className="flex-1 min-w-0">
+                                <SingularValuesAreaChartGrayscale
+                                    svdData={svdData.grayscale}
+                                    usedValues={usedValues}
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <CumulativeEnergyChart
+                                    svdData={svdData.grayscale}
+                                    usedValues={usedValues}
+                                />
+                            </div>
+                        </div>
                     )}
                     {/* {svdData && (
                         (useColor && !svdData.color && <div className="h-60 flex items-center justify-center text-muted-foreground">Color SVD data not available.</div>) ||
