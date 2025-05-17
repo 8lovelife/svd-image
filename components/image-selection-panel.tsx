@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"; // Added useEffect for default sample selection
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { ColorSvdData } from "@/lib/utils"; // Make sure this path is correct
+import { ColorSvdData, RawPixelData, SvdData } from "@/lib/utils"; // Make sure this path is correct
 import ImageUpload from "./image-upload";     // Make sure this path is correct
 import { performColorSVD } from "@/lib/svd";    // Make sure this path is correct
 
@@ -39,11 +39,16 @@ interface ImageSelectionPanelProps {
         rawImageData: ImageData,
         width: number,
         height: number,
-        svdData: ColorSvdData | null // Allow null if SVD can fail
+        svdData: ColorSvdData | null,// Allow null if SVD can fail
+        grayscaleSvdData: SvdData | null,
+        reconstructColorPixelData: RawPixelData | null,
+        reconstructGrayPixelData: RawPixelData | null
     ) => void;
     isLoading: boolean; // This prop will disable interactions
     setIsProcessing: (isProcessing: boolean) => void; // Optional: If you want to set a loading state in the parent
     className?: string; // Optional: Allow passing className to the Card
+    useColor: boolean; // Optional: If you want to pass color mode
+    setInitPixelData: (pixelData: RawPixelData) => void; // Optional: Setter for initial pixel data
 }
 
 
@@ -51,7 +56,9 @@ export default function ImageSelectionPanel({
     onImageLoaded,
     isLoading, // This is the prop from the parent indicating overall processing
     setIsProcessing,
-    className
+    className,
+    useColor,
+    setInitPixelData
 }: ImageSelectionPanelProps) {
     // selectedSampleId is internal to this component for visual highlighting
     const [selectedSampleId, setSelectedSampleId] = useState<string | null>(null);
@@ -117,7 +124,7 @@ export default function ImageSelectionPanel({
                     if (!ctx) {
                         console.error("Could not get canvas context");
                         alert("Could not get canvas context");
-                        onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), img.width, img.height, null);
+                        // onImageLoaded(imgSrcDataUrl, new ImageData(1, 1), img.width, img.height, null, null, null); // Pass placeholder values
                         setIsProcessing(false);
                         return;
                     }
@@ -128,17 +135,27 @@ export default function ImageSelectionPanel({
 
                     console.log("Main thread: Posting ImageData to worker for SVD calculation.");
                     // Send ImageData to worker. ImageData is transferable.
-                    worker.postMessage({ type: 'CALCULATE_SVD', payload: rawImgData }, [rawImgData.data.buffer]);
+                    worker.postMessage({ type: 'CALCULATE_SVD', payload: rawImgData, useColor: useColor }, [rawImgData.data.buffer]);
 
                     worker.onmessage = (event) => {
-                        const { type, result, originalImageData, error } = event.data;
+                        const { type, colorSvdResult, grayscaleSvdResult, originalImageData, reconstructedColorPixelData, reconstructedGrayPixelData, error } = event.data;
                         if (type === 'SVD_RESULT') {
                             console.log("Main thread: Received SVD_RESULT from worker.");
-                            onImageLoaded(imgSrcDataUrl, originalImageData, img.width, img.height, result as ColorSvdData);
+                            console.log("Main onImageLoaded - reconstructedColorPxData:", reconstructedColorPixelData); // CRITICAL LOG
+                            console.log("Main onImageLoaded - reconstructedGrayPxData:", reconstructedGrayPixelData);   // CRITICAL LOG
+                            onImageLoaded(imgSrcDataUrl, originalImageData, img.width, img.height, colorSvdResult as ColorSvdData, grayscaleSvdResult as SvdData, reconstructedColorPixelData, reconstructedGrayPixelData); // Assuming reconstructColorImage and reconstructGrayImage are null for now
+                            let initPixelData: RawPixelData
+                            if (useColor) {
+                                initPixelData = reconstructedColorPixelData;
+                            } else {
+                                initPixelData = reconstructedGrayPixelData;
+                            }
+                            console.log("Main thread: Setting initial pixel data for reconstruction:", initPixelData);
+                            setInitPixelData(initPixelData);
                         } else if (type === 'SVD_ERROR') {
                             console.error("Main thread: Received SVD_ERROR from worker:", error);
                             alert(`An error occurred during SVD processing in worker: ${error}`);
-                            onImageLoaded(imgSrcDataUrl, originalImageData, img.width, img.height, null);
+                            // onImageLoaded(imgSrcDataUrl, originalImageData, img.width, img.height, null, null, null); // Use a fresh ImageData or the one from before posting if possible
                         }
                         setIsProcessing(false);
                         // Clean up worker message handler for this specific task to avoid multiple handlers
@@ -149,7 +166,7 @@ export default function ImageSelectionPanel({
                     worker.onerror = (error) => {
                         console.error("Main thread: Worker error:", error);
                         alert("An unexpected error occurred with the SVD worker.");
-                        onImageLoaded(imgSrcDataUrl, rawImgData, img.width, img.height, null); // Use a fresh ImageData or the one from before posting if possible
+                        // onImageLoaded(imgSrcDataUrl, rawImgData, img.width, img.height, null, null, null); // Use a fresh ImageData or the one from before posting if possible
                         setIsProcessing(false);
                         worker.onmessage = null;
                         worker.onerror = null;
@@ -159,7 +176,7 @@ export default function ImageSelectionPanel({
                 img.onerror = () => {
                     console.error("Image load error (Image object)");
                     alert("Could not load image data from file.");
-                    onImageLoaded(localImgSrcDataUrl || "error_url", new ImageData(1, 1), 0, 0, null); // Pass placeholder values
+                    // onImageLoaded(localImgSrcDataUrl || "error_url", new ImageData(1, 1), 0, 0, null, null, null); // Pass placeholder values
                     setIsProcessing(false);
                 };
                 img.src = imgSrcDataUrl;

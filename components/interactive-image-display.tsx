@@ -5,8 +5,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Download, ImageIcon } from "lucide-react"
-import { ColorSvdData, ImageDataState, SvdData } from "@/lib/utils"
+import { AppSvdData, ColorSvdData, ImageDataState, RawPixelData, SvdData } from "@/lib/utils"
 import { performSVD, reconstructColor, reconstructColorImage, reconstructGrayImage, reconstructImage } from "@/lib/svd"
+import App from "next/app"
 
 interface InteractiveImageDisplayProps {
     originalImage: string | null
@@ -16,13 +17,19 @@ interface InteractiveImageDisplayProps {
     } | null
     width: number
     height: number
-    isLoadingSvd: boolean
+    isProcessing: boolean
     singularValuesUsed: number
     setSingularValuesUsed: (value: number) => void
     useColor: boolean
     setUseColor: (value: boolean) => void
     imageDataState?: ImageDataState
     setGraySvd: (svdData: SvdData | null) => void
+    reconstructColorPixelData: RawPixelData | null
+    reconstructGrayPixelData: RawPixelData | null
+    initPixelData: RawPixelData | null
+    appSvdData?: AppSvdData | null
+    setIsProcessing: (isProcessing: boolean) => void
+
 }
 
 export default function InteractiveImageDisplay({
@@ -30,60 +37,72 @@ export default function InteractiveImageDisplay({
     svdData,
     width,
     height,
-    isLoadingSvd,
+    isProcessing,
     singularValuesUsed,
     setSingularValuesUsed,
     useColor,
     setUseColor,
     imageDataState,
-    setGraySvd
+    setGraySvd,
+    reconstructColorPixelData,
+    reconstructGrayPixelData,
+    initPixelData,
+    appSvdData,
+    setIsProcessing
 }: InteractiveImageDisplayProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
-    // const [singularValuesUsed, setSingularValuesUsed] = useState<number>(0)
-    const [maxSingularValues, setMaxSingularValues] = useState<number>(0)
-    // const [useColor, setUseColor] = useState<boolean>(true)
-    const [compressionRatio, setCompressionRatio] = useState<number>(0)
-    const [isProcessing, setIsProcessing] = useState<boolean>(false)
-    const imageProcWorkerRef = useRef<Worker | null>(null);
-
+    // const [maxSingularValues, setMaxSingularValues] = useState<number>(0)
+    // const [isProcessing, setIsProcessing] = useState<boolean>(false)
+    const restructorWorkerRef = useRef<Worker | null>(null);
+    const [reconstructedPixelData, setReconstructedPixelData] = useState<RawPixelData | null>(null);
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Initialize the slider value when SVD data is loaded
+    // useEffect(() => {
+
+    let maxSingularValues = 0;
+    console.log("InteractiveDisplay: svdData changed. useColor:", useColor, "appSvdData:", appSvdData);
+    if (useColor && appSvdData?.color) {
+        maxSingularValues = appSvdData.color.r.s.length
+
+    } else if (appSvdData?.grayscale) {
+        maxSingularValues = appSvdData.grayscale.s.length
+    }
+
+
     useEffect(() => {
-        if (useColor && svdData?.color) {
-            const maxValues = svdData.color.r.s.length
-            setMaxSingularValues(maxValues)
-            // setSingularValuesUsed(maxValues)
-        } else if (svdData?.grayscale) {
-            const maxValues = svdData.grayscale.s.length
-            setMaxSingularValues(maxValues)
-            // setSingularValuesUsed(maxValues)
-        }
-    }, [svdData, useColor])
+        console.log("InteractiveDisplay: initPixelData prop changed. Updating reconstructedPixelData.", initPixelData);
+        setReconstructedPixelData(initPixelData)
+    }, [initPixelData]);
+
+
+    useEffect(() => {
+        // This effect runs only on mount and unmount
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Update the canvas when parameters change
     useEffect(() => {
         const updateCanvas = async () => {
-
             if (!svdData || !canvasRef.current) return
             try {
                 setIsProcessing(true)
                 const canvas = canvasRef.current
                 const ctx = canvas.getContext("2d")
                 if (!ctx) return
-
-                // Create reconstructed matrices for each channel
-                if (useColor && svdData.color) {
-                    console.log("Reconstructing color image with SVD data")
-                    const reconstructedImageData = await reconstructColorImage(svdData.color, singularValuesUsed, width, height)
+                if (reconstructedPixelData) {
+                    console.log("draw image from reconstructedPixelData")
+                    const finalImageData = new ImageData(
+                        reconstructedPixelData.data,
+                        reconstructedPixelData.width,
+                        reconstructedPixelData.height
+                    );
                     ctx.clearRect(0, 0, width, height);
-                    ctx.putImageData(reconstructedImageData, 0, 0);
-                } else if (!useColor && imageDataState?.rawImageData) {
-                    console.log("Reconstructing grayscale image with SVD data")
-                    const grayscale = await performSVD(imageDataState.rawImageData);
-                    setGraySvd(grayscale)
-                    const reconstructedImageData = await reconstructGrayImage(grayscale, singularValuesUsed, width, height)
-                    ctx.clearRect(0, 0, width, height);
-                    ctx.putImageData(reconstructedImageData, 0, 0);
+                    ctx.putImageData(finalImageData, 0, 0);
                 }
             } catch (error) {
                 console.error("Error updating canvas:", error)
@@ -105,127 +124,195 @@ export default function InteractiveImageDisplay({
         }
 
         updateCanvas()
-    }, [singularValuesUsed, useColor, originalImage])
+    }, [reconstructedPixelData])
 
 
-    // InteractiveImageDisplay.tsx
+    // Initialize and terminate the reconstruction worker
+    useEffect(() => {
+        // Ensure path to worker is correct for your build setup
+        restructorWorkerRef.current = new Worker(new URL('../lib/svd.reconstruct.worker.js', import.meta.url), { type: 'module' });
 
-    // ... (props: originalImage, svdData, width, height, isLoadingSvd, singularValuesUsed,
-    //             setSingularValuesUsed, useColor, setUseColor, imageDataState, setGraySvd)
+        restructorWorkerRef.current.onmessage = (event: MessageEvent) => {
+            const {
+                type,
+                pixelData, // This is RawPixelData
+                error,
+                k: workerK,
+                useColor: workerUseColor
+            } = event.data;
 
-    // useEffect(() => {
-    //     const updateCanvas = async () => {
-    //         // Condition 1: No svdData or canvas not ready
-    //         if (!canvasRef.current || !width || !height) { // Simplified initial check
-    //             // If no canvas, nothing to do. If no dimensions, also problematic.
-    //             return;
-    //         }
+            const updateCanvas = async () => {
 
-    //         // `svdData` prop comes from parent, might be null initially or after errors.
-    //         // `imageDataState` prop also from parent, contains rawImageData.
+                console.log("Reconstruct updateCanvas triggered. workerK:", workerK, "useColor:", workerUseColor,
+                    " pixelData:", pixelData, " appSvdData:", appSvdData, "canvasRef:", canvasRef.current);
 
-    //         setIsProcessing(true); // Start processing for canvas update
-    //         try {
-    //             const canvas = canvasRef.current;
-    //             const ctx = canvas.getContext("2d");
-    //             if (!ctx) {
-    //                 setIsProcessing(false);
-    //                 return;
-    //             }
+                if (!canvasRef.current) {
+                    console.log("Reconstruct updateCanvas: No appSvdData or canvasRef");
+                    setIsProcessing(false)
+                    return
+                }
+                try {
+                    // setReconstructedPixelData(pixelData)
 
-    //             ctx.clearRect(0, 0, width, height); // Clear canvas first
+                    const canvas = canvasRef.current
+                    const ctx = canvas.getContext("2d")
+                    if (!ctx) return
+                    if (pixelData) {
+                        console.log("draw image from reconstructed pixelData")
+                        const finalImageData = new ImageData(
+                            pixelData.data,
+                            pixelData.width,
+                            pixelData.height
+                        );
+                        ctx.clearRect(0, 0, width, height);
+                        ctx.putImageData(finalImageData, 0, 0);
+                    }
 
-    //             if (useColor) {
-    //                 if (svdData?.color) { // Color SVD data IS available directly
-    //                     console.log("Reconstructing COLOR image from svdData.color");
-    //                     const reconstructed = await reconstructColorImage(svdData.color, singularValuesUsed, width, height);
-    //                     ctx.putImageData(reconstructed, 0, 0);
-    //                 } else if (originalImage) {
-    //                     console.log("COLOR mode: svdData.color missing, drawing original image.");
-    //                     // Draw original image as fallback for color mode if SVD data not ready
-    //                     const img = new Image();
-    //                     img.onload = () => ctx.drawImage(img, 0, 0, width, height);
-    //                     img.src = originalImage;
-    //                 } else {
-    //                     console.log("COLOR mode: No SVD data and no original image.");
-    //                 }
-    //             } else { // Grayscale mode (!useColor)
-    //                 // For grayscale, we have a few possibilities for where SVD data comes from:
-    //                 // 1. svdData.grayscale (if already calculated and passed down by parent)
-    //                 // 2. Calculate SVD now from imageDataState.rawImageData
-    //                 // 3. imageDataState.rawImageData isn't even available (should draw original or nothing)
+                } catch (error) {
+                    console.error("Error updating canvas:", error)
+                    // If there's an error, try to show the original image
+                    if (originalImage && canvasRef.current) {
+                        const canvas = canvasRef.current
+                        const ctx = canvas.getContext("2d")
+                        if (ctx) {
+                            const img = new Image()
+                            img.onload = () => {
+                                ctx.drawImage(img, 0, 0, width, height)
+                            }
+                            img.src = originalImage
+                        }
+                    }
+                } finally {
+                    setIsProcessing(false)
+                }
+            }
 
-    //                 if (svdData?.grayscale) { // Scenario 1: Grayscale SVD already computed and passed as prop
-    //                     console.log("Reconstructing GRAYSCALE image from svdData.grayscale");
-    //                     const reconstructed = await reconstructGrayImage(svdData.grayscale, singularValuesUsed, width, height);
-    //                     ctx.putImageData(reconstructed, 0, 0);
-    //                 } else if (imageDataState?.rawImageData) { // Scenario 2: Raw image data available, need to compute SVD
-    //                     console.log("GRAYSCALE mode: Performing SVD from rawImageData and reconstructing...");
-    //                     // IMPORTANT: performSVD is now async (or should be if it's heavy)
-    //                     // This performSVD here is likely on the main thread.
-    //                     // If ImageSelectionPanel moved its SVD to a worker, this component still tries to do it on main thread for grayscale if svdData.grayscale isn't present.
-    //                     const grayscaleSvdResult = await performSVD(imageDataState.rawImageData); // THIS IS THE CPU-INTENSIVE PART
+            if (type === 'RECONSTRUCTION_COMPLETE') {
+                console.log("Main thread: Received Reconstruct_RESULT from worker.");
+                updateCanvas()
+            } else if (type === 'RECONSTRUCT_ERROR') {
+                console.error("Main thread: Received Reconstruct_ERROR from worker:", error);
+                alert(`An error occurred during RECONSTRUCT processing in worker: ${error}`);
+            }
 
-    //                     if (grayscaleSvdResult) {
-    //                         setGraySvd(grayscaleSvdResult); // Update parent state. This will trigger a re-render.
-    //                         // The next run of this useEffect MIGHT pick up svdData.grayscale if parent updates it correctly
-    //                         // But this immediate run will use grayscaleSvdResult for reconstruction.
-    //                         const reconstructed = await reconstructGrayImage(grayscaleSvdResult, singularValuesUsed, width, height);
-    //                         ctx.putImageData(reconstructed, 0, 0);
-    //                     } else {
-    //                         console.error("Grayscale SVD calculation failed.");
-    //                         if (originalImage) { // Fallback if SVD failed
-    //                             console.log("GRAYSCALE mode: SVD failed, drawing original image.");
-    //                             const img = new Image();
-    //                             img.onload = () => ctx.drawImage(img, 0, 0, width, height);
-    //                             img.src = originalImage;
-    //                         }
-    //                     }
-    //                 } else if (originalImage) { // Scenario 3: No SVD data path, fallback to original
-    //                     console.log("GRAYSCALE mode: No SVD path (no svdData.grayscale, no rawImageData), drawing original image.");
-    //                     const img = new Image();
-    //                     img.onload = () => ctx.drawImage(img, 0, 0, width, height);
-    //                     img.src = originalImage;
-    //                 } else {
-    //                     console.log("GRAYSCALE mode: No SVD path and no original image.");
-    //                 }
-    //             }
-    //         } catch (error) {
-    //             console.error("Error updating canvas in InteractiveImageDisplay:", error);
-    //             if (originalImage && canvasRef.current) { // Fallback to original on any error
-    //                 const canvas = canvasRef.current;
-    //                 const ctx = canvas.getContext("2d");
-    //                 if (ctx) {
-    //                     const img = new Image();
-    //                     img.onload = () => {
-    //                         ctx.clearRect(0, 0, width, height); // Clear before drawing error fallback
-    //                         ctx.drawImage(img, 0, 0, width, height);
-    //                     }
-    //                     img.src = originalImage;
-    //                 }
-    //             }
-    //         } finally {
-    //             setIsProcessing(false);
-    //         }
-    //     };
+        };
 
-    //     updateCanvas();
-    // }, [
-    //     svdData, // IMPORTANT: Add svdData here
-    //     singularValuesUsed,
-    //     useColor,
-    //     originalImage,
-    //     width, // IMPORTANT
-    //     height, // IMPORTANT
-    //     imageDataState, // IMPORTANT
-    //     setGraySvd // This is a function, if it's stable (e.g., from useState), it's okay. If it changes, it should be here or wrapped in useCallback.
-    //     // setIsProcessing // State setter, stable
-    // ]);
+        restructorWorkerRef.current.onerror = (err) => {
+            console.error("Reconstruction worker error:", err);
+            setIsProcessing(false);
+        }
+
+        return () => {
+            restructorWorkerRef.current?.terminate();
+            restructorWorkerRef.current = null;
+        };
+    }, []); // Runs once on mount and unmount
+
+
+    const triggerWorkerReconstructionImperative = (
+        // Parameters representing the NEW state that triggered this call
+        newKValue: number,
+        newIsColorMode: boolean
+        // No need to pass other state/props if this function is defined
+        // inside InteractiveImageDisplay and can access them directly from scope.
+        // However, this makes it harder to memoize with useCallback if needed.
+    ) => {
+        const effectId = `triggerWorkerImperative-${Date.now()}`;
+        console.log(effectId, "Eval. New k:", newKValue, "New colorMode:", newIsColorMode);
+        console.log(effectId, "Current props/state: k_prop:", singularValuesUsed, "maxK_state:", maxSingularValues, "initPixelData_prop:", !!initPixelData, "isProcessing_prop:", isProcessing, "svdData_prop:", !!svdData);
+
+        // Use the NEW values for k and color mode for decisions.
+        // For other values (svdData, width, height, initPixelData, maxSingularValues),
+        // we rely on them being the current values from the component's scope.
+
+        if (isProcessing || !svdData || !restructorWorkerRef.current || width <= 0 || height <= 0) {
+            console.log(effectId, "Prerequisites not met.");
+            if (isProcessing) setIsProcessing(false);
+            return;
+        }
+
+        if (newKValue <= 0) {
+            console.log(effectId, "k is 0. Setting reconstructedImageData to null.");
+            // Check against current state before setting to avoid unnecessary re-render if already null
+            if (reconstructedPixelData !== null) setReconstructedPixelData(null);
+            if (isProcessing) setIsProcessing(false);
+            return;
+        }
+
+        console.log(effectId, `Posting RECONSTRUCT_IMAGE to worker. k=${newKValue}, useColor=${useColor}`);
+        // setIsProcessing(true);
+        restructorWorkerRef.current.postMessage({
+            type: 'RECONSTRUCT_IMAGE',
+            payload: appSvdData?.rawImageData,
+            svdChannelData: svdData,
+            k: newKValue,
+            width,
+            height,
+            useColor: newIsColorMode,
+        });
+    };
+
+
+    const handleColorModeChange = (isColor: boolean) => {
+        setUseColor(isColor)
+        setIsProcessing(true)
+        triggerWorkerReconstructionImperative(
+            singularValuesUsed,
+            isColor
+        )
+    }
+
+    // const handleColorModeChange = (isColor: boolean) => {
+    //     setUseColor(isColor)
+    //     setIsProcessing(true)
+    //     triggerWorkerReconstructionImperative(
+    //         singularValuesUsed,
+    //         isColor
+    //     )
+    // }
+
+    // Handle slider change
+    const handleSetSingularChange = (presetValue: number) => {
+        setSingularValuesUsed(presetValue)
+        setIsProcessing(true)
+        triggerWorkerReconstructionImperative(
+            presetValue,
+            useColor
+        )
+    }
+
 
     // Handle slider change
     const handleSliderChange = (newValue: number[]) => {
-        setSingularValuesUsed(newValue[0])
-    }
+        const newK = newValue[0];
+        setSingularValuesUsed(newK); // Update parent state for immediate UI feedback
+
+        // Clear any existing timeout if user is still sliding
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        // Set a new timeout. When it fires, it will call triggerWorkerReconstructionImperative.
+        // The values of `useColor`, `appSvdData`, `width`, `height`, `initPixelData`, `localMaxSingularValues`
+        // used by triggerWorkerReconstructionImperative will be those current at the time the timeout executes.
+        debounceTimeoutRef.current = setTimeout(() => {
+            console.log("Slider Debounce: Timeout fired. Calling triggerWorkerReconstructionImperative with k=", newK);
+
+            // IMPORTANT: triggerWorkerReconstructionImperative, when called here,
+            // will use the 'newK' from this closure (which is correct for k).
+            // For 'useColor' and other data (svdData, width, height, initPixelData, maxSingularValues),
+            // it will use the values that are current in the InteractiveImageDisplay component's
+            // scope *at the moment this timeout callback executes*.
+            // This is generally what you want.
+            setIsProcessing(true)
+
+            triggerWorkerReconstructionImperative(
+                newK,     // The k-value from when the timeout was set (final value after sliding stopped)
+                useColor  // The CURRENT useColor prop value when timeout executes
+                // Same for other props/state read by triggerWorkerReconstructionImperative
+            );
+        }, 300); // Adjust debounce delay (e.g., 300ms)
+    };
 
     // Handle download
     const handleDownload = () => {
@@ -262,10 +349,8 @@ export default function InteractiveImageDisplay({
         ].filter((v, i, a) => v > 0 && a.indexOf(v) === i)
     })()
 
-    const showLoadingOverlay = isLoadingSvd || isProcessing;
 
-
-    if (!originalImage && !isLoadingSvd) {
+    if (!originalImage && !isProcessing) {
         return (
             <div className="flex items-center justify-center border rounded-lg p-4 bg-muted/10 h-48">
                 <p className="text-muted-foreground">No image available</p>
@@ -277,26 +362,21 @@ export default function InteractiveImageDisplay({
         <div>
             {/* Image display */}
             <div className="relative w-full overflow-hidden rounded-lg border bg-background">
-                {(width > 0 && height > 0) ? (
-                    <canvas
-                        ref={canvasRef}
-                        width={width}
-                        height={height}
-                        className="w-full h-auto object-contain block"
-                        style={{ maxHeight: "40vh" }}
-                    />
-                ) : (
-                    // Fallback if width/height are 0 but we expect an image eventually
-                    <Skeleton className="w-full aspect-[4/3]" style={{ maxHeight: "40vh" }} />
-                )}
+                <canvas
+                    ref={canvasRef}
+                    width={width}
+                    height={height}
+                    className="w-full h-auto object-contain block"
+                    style={{ maxHeight: "40vh" }}
+                />
 
                 {/* Loading Overlay (covers canvas) */}
-                {showLoadingOverlay && (
+                {/* {isProcessing && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm z-10">
-                        {/* <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" /> */}
                         <div className="text-muted-foreground">Processing...</div>
                     </div>
-                )}
+                )} */}
+
             </div>
 
             {/* Controls below image */}
@@ -327,8 +407,8 @@ export default function InteractiveImageDisplay({
                                     key={presetValue}
                                     variant={singularValuesUsed === presetValue ? "default" : "outline"}
                                     size="sm"
-                                    onClick={() => setSingularValuesUsed(presetValue)}
-                                    disabled={showLoadingOverlay}
+                                    onClick={() => handleSetSingularChange(presetValue)}
+                                    disabled={isProcessing}
                                     className="h-7 px-2 text-xs"
                                 >
                                     {presetValue === 1
@@ -345,15 +425,15 @@ export default function InteractiveImageDisplay({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setUseColor(!useColor)}  // pass a boolean, not a function
-                            disabled={showLoadingOverlay}
+                            onClick={() => handleColorModeChange(!useColor)}  // pass a boolean, not a function
+                            disabled={isProcessing}
                             className="h-7"
                         >
                             <ImageIcon className="h-4 w-4 mr-1" />
                             {useColor ? "Grayscale" : "Color"}
                         </Button>
 
-                        <Button variant="outline" size="sm" onClick={handleDownload} disabled={showLoadingOverlay} className="h-7">
+                        <Button variant="outline" size="sm" onClick={handleDownload} disabled={isProcessing} className="h-7">
                             <Download className="h-4 w-4" />
                         </Button>
                     </div>

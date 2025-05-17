@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react"; // Added useEffect for default sample selection
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { ColorSvdData, ImageDataState, SvdData } from "@/lib/utils"; // Make sure this path is correct
+import { AppSvdData, ColorSvdData, ImageDataState, RawPixelData, SvdData } from "@/lib/utils"; // Make sure this path is correct
 import ImageUpload from "./image-upload";     // Make sure this path is correct
 import { performColorSVD } from "@/lib/svd";    // Make sure this path is correct
 import InteractiveImageDisplay from "./interactive-image-display";
@@ -19,6 +19,10 @@ interface ImageReconstructionProps {
     graySvd: SvdData | null
     singularValuesUsed: number
     setSingularValuesUsed: (value: number) => void
+    reconstructColorPixelData: RawPixelData | null
+    reconstructGrayPixelData: RawPixelData | null
+    initPixelData: RawPixelData | null
+    appSvdData?: AppSvdData | null
 }
 
 
@@ -31,37 +35,42 @@ export default function InterativeImageReconstruction({
     setGraySvd,
     graySvd,
     singularValuesUsed,
-    setSingularValuesUsed
+    setSingularValuesUsed,
+    reconstructColorPixelData,
+    reconstructGrayPixelData,
+    initPixelData,
+    appSvdData
 }: ImageReconstructionProps) {
 
 
     // 1. Calculate totalPixels
     const totalPixels = useMemo(() => {
+        const imageData = appSvdData?.rawImageData;
         if (imageData?.width && imageData?.height) {
             return imageData.width * imageData.height;
         }
         return 0;
-    }, [imageData?.width, imageData?.height]);
+    }, [appSvdData?.rawImageData]);
 
 
     // 2. Calculate maxKForCurrentMode (Maximum possible singular values for the current mode)
     const maxKForCurrentMode = useMemo(() => {
-        if (useColor && imageData?.svdData?.r?.s) {
+        if (useColor && appSvdData?.color?.r?.s) {
             // For color, all channels (r, g, b) should have the same number of singular values
-            return imageData.svdData.r.s.length;
-        } else if (!useColor && graySvd?.s) {
-            return graySvd.s.length;
+            return appSvdData?.color?.r?.s.length;
+        } else if (!useColor && appSvdData?.grayscale?.s) {
+            return appSvdData?.grayscale?.s.length;
         }
         return 0;
-    }, [useColor, imageData?.svdData, graySvd]);
+    }, [useColor, appSvdData]);
 
 
     // 3. Calculate compressionRatioForCurrentK
     const compressionRatioForCurrentK = useMemo(() => {
-        if (!imageData || singularValuesUsed <= 0 || maxKForCurrentMode === 0) {
+        if (!appSvdData?.rawImageData || singularValuesUsed <= 0 || maxKForCurrentMode === 0) {
             return 0; // Or indicate N/A
         }
-
+        const imageData = appSvdData.rawImageData;
         const M = imageData.height; // Number of rows
         const N = imageData.width;  // Number of columns
         const k = singularValuesUsed;     // Number of singular values used
@@ -90,7 +99,7 @@ export default function InterativeImageReconstruction({
 
         return originalStorageElements / compressedStorageElements;
 
-    }, [imageData, singularValuesUsed, useColor, maxKForCurrentMode]);
+    }, [appSvdData?.rawImageData, singularValuesUsed, useColor, maxKForCurrentMode]);
 
     return (
         <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
@@ -115,14 +124,18 @@ export default function InterativeImageReconstruction({
                         }
                         width={imageData?.width || 0}
                         height={imageData?.height || 0}
-                        isLoadingSvd={isProcessing}
+                        isProcessing={isProcessing}
                         singularValuesUsed={singularValuesUsed}
                         setSingularValuesUsed={setSingularValuesUsed}
                         useColor={useColor}
                         setUseColor={setUseColor}
                         imageDataState={imageData}
                         setGraySvd={setGraySvd}
-                        setProcessSvd={setProcessSvd}
+                        setIsProcessing={setProcessSvd}
+                        reconstructColorPixelData={reconstructColorPixelData}
+                        reconstructGrayPixelData={reconstructGrayPixelData}
+                        initPixelData={initPixelData}
+                        appSvdData={appSvdData}
                     />
                 </div>
 
@@ -130,18 +143,18 @@ export default function InterativeImageReconstruction({
                     <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Image & SVD Details:</h4>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5"> {/* Increased gap-y */}
                         <div><span className="font-medium">Dimensions:</span></div>
-                        <div>{imageData ? `${imageData.width} × ${imageData.height} px` : "-"}</div>
+                        <div>{appSvdData ? `${appSvdData.rawImageData.width} × ${appSvdData.rawImageData.height} px` : "-"}</div>
                         <div><span className="font-medium">Total Pixels:</span></div>
-                        <div>{imageData ? totalPixels.toLocaleString() : "-"}</div>
+                        <div>{appSvdData ? totalPixels.toLocaleString() : "-"}</div>
                         <div><span className="font-medium">Mode:</span></div>
-                        <div>{imageData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
+                        <div>{appSvdData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
                         <div><span className="font-medium">Singular Values (k):</span></div>
                         <div>
-                            {imageData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}
+                            {appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}
                         </div>
                         <div><span className="font-medium">Compression Ratio:</span></div>
                         <div>
-                            {imageData ? (compressionRatioForCurrentK > 0 ? `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}
+                            {appSvdData ? (compressionRatioForCurrentK > 0 ? `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}
                         </div>
                     </div>
                 </div>

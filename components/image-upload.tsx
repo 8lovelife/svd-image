@@ -46,6 +46,7 @@ export default function ImageUpload({ processImage, disabled = false }: ImageUpl
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("File changed")
         if (disabled) return;
         if (e.target.files && e.target.files[0]) {
             processImage(e.target.files[0])
@@ -79,14 +80,9 @@ export default function ImageUpload({ processImage, disabled = false }: ImageUpl
                     <div className={`mb-0.5 text-sm font-medium ${disabled ? 'text-muted-foreground/50 dark:text-muted-foreground/60' : 'text-foreground'}`}> {/* Smaller font, tiny margin */}
                         {isDragging && !disabled ? "Drop here" : "Upload File"} {/* Shorter text */}
                     </div>
-                    <p className={`text-xs text-muted-foreground/80 dark:text-muted-foreground/70 max-w-[90%] ${disabled ? 'opacity-50' : ''} ${!disabled ? 'mb-1.5' : ''}`}> {/* Even smaller text, slight margin before button */}
+                    <p className={`text-xs text-muted-foreground/80 dark:text-muted-foreground/70 max-w-[90%] mb-1.5 ${disabled ? 'opacity-50' : ''}`}>
                         Drag & drop or click
                     </p>
-                    {/* {!disabled && (
-                        <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs leading-tight"> 
-                            Select
-                        </Button>
-                    )} */}
                 </CardContent>
             </Card>
             <input

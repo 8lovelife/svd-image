@@ -1,32 +1,33 @@
 "use client"
 
-import { ColorSvdData, SvdData } from "@/lib/utils";
+import { AppSvdData, ColorSvdData, SvdData } from "@/lib/utils";
 import { SingularValuesAreaChartGrayscale } from "./singular-values-areachart-grayscale";
 import { SingularValuesAreaChartRGB } from "./singular-values-areachart-rgb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"; // shadcn/ui Card
 import { SvdMatrixVisualizer } from "./svd-matrix";
+import App from "next/app";
 
 interface SvdAnalysisProps {
-    svdData: {
-        grayscale?: SvdData | null;
-        color?: ColorSvdData | null;
-    } | null;
+    svdData: AppSvdData | null; // SVD data for color or grayscale
     usedValues: number;
     useColor: boolean;
-    originalImageWidth: number;
-    originalImageHeight: number;
+    // originalImageWidth: number;
+    // originalImageHeight: number;
 }
 
 export default function SvdAnalysis({
     svdData,
     usedValues,
     useColor,
-    originalImageWidth,
-    originalImageHeight,
+    // originalImageWidth,
+    // originalImageHeight,
 }: SvdAnalysisProps) {
     // The SvdAnalysis component now IS the Card that fills the space.
     // The h-full and flex properties allow it to expand.
     // The CardContent will handle internal scrolling.
+
+    let originalImageWidth = svdData?.rawImageData.width || 0;
+    let originalImageHeight = svdData?.rawImageData.height || 0;
     return (
         <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
             <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
