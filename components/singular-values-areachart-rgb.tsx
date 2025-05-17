@@ -188,53 +188,41 @@ export function SingularValuesAreaChartRGB({
                         />
                         <ChartTooltip
                             cursor={{ stroke: buildHslString(MUTED_FOREGROUND_COLOR_HSL_VAL), strokeDasharray: "3 3" }}
-                            // Pass Recharts' active, payload, label to ChartTooltipContent's props
-                            content={({ active, payload, label: rechartsLabel }: TooltipProps<number, string>) => {
-                                // console.log("Tooltip - Active:", active, "Recharts Label:", rechartsLabel, "Payload:", payload);
+                            content={({ active, payload, label }: TooltipProps<number, string>) => {
+                                // console.log("Tooltip - Active:", active, "Label:", label, "Payload:", payload);
                                 if (active && payload && payload.length) {
+                                    // Important: Get the k value from the payload's first item
+                                    const kValue = payload[0]?.payload?.k
+
                                     return (
-                                        <ChartTooltipContent // This is the shadcn/ui component
-                                            // Props for ChartTooltipContent:
-                                            active={active} // Pass active status
-                                            payload={payload} // Pass the Recharts payload
-                                            label={rechartsLabel} // Pass Recharts' label (x-axis value) AS ChartTooltipContent's label prop
+                                        <ChartTooltipContent
+                                            active={active}
+                                            payload={payload}
+                                            label={label}
                                             className="w-auto"
-                                            hideIndicator={false} // Show shadcn's indicator dots
-                                            labelFormatter={(valueFromLabelProp) => `k = ${valueFromLabelProp}`} // Formats the main label
+                                            hideIndicator={false}
+                                            // Use the kValue directly from the payload
+                                            labelFormatter={() => `k = ${kValue}`}
                                             formatter={(value, name, itemProps) => {
-                                                // value: The numerical value for this series (e.g., R_value at this k)
-                                                // name: The dataKey of the series (e.g., "R_value")
-                                                // itemProps: { dataKey, name (from Area's name), color, value, payload (original data point) }
+                                                const configEntry = chartConfigRGB[name as keyof typeof chartConfigRGB]
+                                                const displayName = configEntry?.label || name
 
-                                                // 'name' here is the dataKey like "R_value". We use it to get the display label.
-                                                const configEntry = chartConfigRGB[name as keyof typeof chartConfigRGB];
-                                                const displayName = configEntry?.label || name; // Should be "Red", "Green", "Blue"
-
-                                                if (typeof value === 'number') {
+                                                if (typeof value === "number") {
                                                     return (
                                                         <div className="flex items-center justify-between gap-x-2">
-                                                            {/* The indicator dot is now handled by ChartTooltipContent if hideIndicator={false} */}
-                                                            {/* You can add a manual one if needed:
-                                    <div
-                                        className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: itemProps.color }}
-                                    />
-                                    */}
                                                             <span className="text-muted-foreground" style={{ color: itemProps.color }}>
                                                                 {displayName}:
                                                             </span>
-                                                            <span className="font-semibold text-right tabular-nums">
-                                                                {yTickFormatter(value)}
-                                                            </span>
+                                                            <span className="font-semibold text-right tabular-nums">{yTickFormatter(value)}</span>
                                                         </div>
-                                                    );
+                                                    )
                                                 }
-                                                return null;
+                                                return null
                                             }}
                                         />
-                                    );
+                                    )
                                 }
-                                return null;
+                                return null
                             }}
                         />
 
