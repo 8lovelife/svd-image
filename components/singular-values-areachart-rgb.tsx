@@ -20,8 +20,10 @@ import {
     type ChartConfig,
 } from "@/components/ui/chart"
 import { ColorSvdData } from '@/lib/utils'
-import { useMemo } from "react"
+import { useMemo, useState, useRef, useCallback } from "react"
 import React from "react"
+import { Payload } from "recharts/types/component/DefaultLegendContent"
+
 
 interface SingularValuesAreaChartRGBProps {
     svdData: ColorSvdData | null
@@ -64,9 +66,37 @@ export function SingularValuesAreaChartRGB({
     usedValues,
 }: SingularValuesAreaChartRGBProps) {
 
+    const [visibleChannels, setVisibleChannels] = useState<{ R: boolean; G: boolean; B: boolean }>({
+        R: true, // Initially all visible
+        G: true,
+        B: true,
+    });
+
     if (!svdData || !svdData.r?.s?.length || !svdData.g?.s?.length || !svdData.b?.s?.length) {
         return <div className="text-center text-muted-foreground p-4 h-[300px] flex items-center justify-center">Insufficient SVD data for RGB chart.</div>
     }
+
+    const legendPayload = useMemo((): Payload[] => {
+        return (['R', 'G', 'B'] as const).map(channel => ({
+            value: channel, // This will be passed to handleLegendClick
+            type: "circle",
+            id: channel.toLowerCase(),
+            color: visibleChannels[channel] ? buildHslString(COLORS[channel].baseHslValue) : MUTED_FOREGROUND_COLOR_HSL_VAL, // Dim if inactive
+            inactive: !visibleChannels[channel]
+        }));
+    }, [visibleChannels]);
+
+    const handleLegendClick = useCallback((data: any) => {
+        // data object will be one of the items from the Legend's payload prop
+        // e.g., { value: "R", type: "circle", id: "r", color: "#EF4444" }
+        const channelKey = data.value as keyof typeof visibleChannels; // Assuming value is "R", "G", or "B"
+        if (channelKey && visibleChannels.hasOwnProperty(channelKey)) {
+            setVisibleChannels(prev => ({
+                ...prev,
+                [channelKey]: !prev[channelKey],
+            }));
+        }
+    }, [visibleChannels]);
 
     // xMaxOriginalDataLength is the shortest of R,G,B singular value arrays, capped by maxValuesToPlot
     const xMaxOriginalDataLength = useMemo(() => {
@@ -84,12 +114,17 @@ export function SingularValuesAreaChartRGB({
         if (xMaxOriginalDataLength === 0 || !svdData.r?.s || !svdData.g?.s || !svdData.b?.s) return 0;
         const allRelevantValues = [];
         for (let i = 0; i < xMaxOriginalDataLength; i++) {
-            allRelevantValues.push(svdData.r.s[i] ?? 0);
-            allRelevantValues.push(svdData.g.s[i] ?? 0);
-            allRelevantValues.push(svdData.b.s[i] ?? 0);
+            const rVal = svdData.r.s[i] ?? 0;
+            const gVal = svdData.g.s[i] ?? 0;
+            const bVal = svdData.b.s[i] ?? 0;
+            allRelevantValues.push(rVal);
+            allRelevantValues.push(gVal);
+            allRelevantValues.push(bVal);
         }
-        return Math.max(...allRelevantValues.filter(v => typeof v === 'number' && !isNaN(v)), 0);
-    }, [svdData, xMaxOriginalDataLength]);
+        const maxVal = Math.max(...allRelevantValues.filter(v => typeof v === 'number' && !isNaN(v)), 0);
+        const finalYMax = maxVal > 0 ? maxVal * 1.05 : 1;
+        return finalYMax;
+    }, [svdData, visibleChannels]);
 
 
     // xDomainEnd determines the current visible range of the X-axis
@@ -214,7 +249,7 @@ export function SingularValuesAreaChartRGB({
                         margin={{ top: 5, right: 30, left: 15, bottom: 25 }} //  margin
                         stackOffset="none" // Default for overlapping areas if you prefer, or "expand", "silhouette"
                     >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={buildHslString(BORDER_COLOR_HSL_VAL)} />
+                        {/* <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={buildHslString(BORDER_COLOR_HSL_VAL)} /> */}
                         <XAxis
                             dataKey="k" type="number" tickLine={false} axisLine={false} tickMargin={8}
                             domain={[1, xDomainEnd]} // Use dynamic xDomainEnd
@@ -251,7 +286,7 @@ export function SingularValuesAreaChartRGB({
                                             className="w-auto"
                                             hideIndicator={false}
                                             // Use the kValue directly from the payload
-                                            labelFormatter={() => `at k = ${kValue}`}
+                                            labelFormatter={() => `Singular Value at k = ${kValue}`}
                                             formatter={(value, name, itemProps) => {
                                                 const configEntry = chartConfigRGB[name as keyof typeof chartConfigRGB]
                                                 const displayName = configEntry?.label || name
@@ -276,7 +311,7 @@ export function SingularValuesAreaChartRGB({
                         />
 
                         <Legend
-                            onClick={alert}
+                            onClick={handleLegendClick}
                             layout="horizontal"
                             verticalAlign="middle"
                             wrapperStyle={{
@@ -285,14 +320,13 @@ export function SingularValuesAreaChartRGB({
                                 right: 80,
                                 margin: 0,
                             }}
-                            payload={[
-                                { value: "R", type: "circle", id: "r", color: "#EF4444" },
-                                { value: "G", type: "circle", id: "g", color: "#10B981" },
-                                { value: "B", type: "circle", id: "b", color: "#3B82F6" },
-                            ]}
+                            payload={legendPayload}
                         />
 
                         {(['R', 'G', 'B'] as const).map((channel) => {
+                            if (!visibleChannels[channel]) { // Check visibility state
+                                return null; // Don't render Area if not visible
+                            }
                             const dataKeyValue = `${channel}_value` as keyof typeof chartConfigRGB;
                             const currentGradientId = gradientId(channel); // Use helper
                             const baseHsl = COLORS[channel].baseHslValue;
@@ -307,7 +341,7 @@ export function SingularValuesAreaChartRGB({
                                     dot={false}
                                     activeDot={{ r: 4, strokeWidth: 2, stroke: buildHslString(baseHsl), fill: buildHslString(BACKGROUND_COLOR_HSL_VAL) }}
                                     isAnimationActive={false}
-                                    stackId="1" // Enable stacking
+                                // stackId="1" // Enable stacking
                                 />
                             );
                         })}

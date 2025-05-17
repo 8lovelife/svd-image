@@ -61,7 +61,6 @@ export default function InteractiveImageDisplay({
     // useEffect(() => {
 
     let maxSingularValues = 0;
-    console.log("InteractiveDisplay: svdData changed. useColor:", useColor, "appSvdData:", appSvdData);
     if (useColor && appSvdData?.color) {
         maxSingularValues = appSvdData.color.r.s.length
 

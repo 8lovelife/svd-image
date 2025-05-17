@@ -195,11 +195,12 @@ export function SingularValuesAreaChartGrayscale({
                                     const originalValue = item.payload?.value;
                                     const kValue = item.payload?.k;
                                     if (typeof originalValue === 'number') {
-                                        return [`${yTickFormatter(originalValue)} at k=${kValue} `, chartConfigGrayscale.value.label];
+                                        return [`${yTickFormatter(originalValue)} at k=${kValue} `];
                                     }
+
                                     return [String(value), String(name)];
                                 }}
-                                hideLabel={true}
+                            // hideLabel={true}
                             />}
                         />
                         <Area

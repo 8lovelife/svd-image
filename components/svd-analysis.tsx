@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { SvdMatrixVisualizer } from "./svd-matrix";
 import App from "next/app";
 import { CumulativeEnergyChart } from "./cumulative-energy-areachart-grascale";
+import { ChartZoomWrapper } from "./chart-zoom-wrapper";
+import { CumulativeEnergyChartRGB } from "./cumulative-energy-areachart-rgb";
 
 interface SvdAnalysisProps {
     svdData: AppSvdData | null; // SVD data for color or grayscale
@@ -27,8 +29,8 @@ export default function SvdAnalysis({
     // The h-full and flex properties allow it to expand.
     // The CardContent will handle internal scrolling.
 
-    let originalImageWidth = svdData?.rawImageData.width || 0;
-    let originalImageHeight = svdData?.rawImageData.height || 0;
+    let svdImageWidth = svdData?.rawImageData.width || 0;
+    let svdImageHeight = svdData?.rawImageData.height || 0;
     return (
         <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
             <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
@@ -46,18 +48,50 @@ export default function SvdAnalysis({
                         </div>
                     )}
                     {svdData && useColor && svdData.color && (
-                        <SingularValuesAreaChartRGB
-                            svdData={svdData.color}
-                            usedValues={usedValues}
-                            maxValuesToPlot={100} // Optional: Limit points for performance/clarity
-                        />
+
+                        <div className="flex flex-col md:flex-row gap-4 mt-4 w-full overflow-x-hidden">
+                            <div className="flex-1 min-w-0">
+
+                                <SingularValuesAreaChartRGB
+                                    svdData={svdData.color}
+                                    usedValues={usedValues}
+                                    maxValuesToPlot={100} // Optional: Limit points for performance/clarity
+                                />
+
+                            </div>
+
+                            {/* Cumulative Energy Chart */}
+                            <div className="flex-1 min-w-0">
+
+                                <CumulativeEnergyChartRGB
+                                    svdData={svdData.color}
+                                    usedValues={usedValues} />
+                            </div>
+
+                        </div>
                     )}
                     {svdData && !useColor && svdData.grayscale && (
 
-                        <SingularValuesAreaChartGrayscale
-                            svdData={svdData.grayscale}
-                            usedValues={usedValues}
-                        />
+                        <div className="flex flex-col md:flex-row gap-4 mt-4 w-full overflow-x-hidden">
+                            <div className="flex-1 min-w-0">
+
+                                {/* <ChartZoomWrapper title="Chart Title"> */}
+                                <SingularValuesAreaChartGrayscale
+                                    svdData={svdData.grayscale}
+                                    usedValues={usedValues}
+                                />
+                                {/* </ChartZoomWrapper> */}
+                            </div>
+                            {/* Cumulative Energy Chart */}
+                            <div className="flex-1 min-w-0">
+
+                                <CumulativeEnergyChart
+                                    svdData={svdData.grayscale}
+                                    usedValues={usedValues} />
+                            </div>
+
+                        </div>
+
 
                     )}
                     {/* {svdData && (
@@ -72,18 +106,20 @@ export default function SvdAnalysis({
                     <SvdMatrixVisualizer
                         svdData={svdData.color.r} // Ensure svdData.color.r is of type SvdData {u,s,v}
                         usedValues={usedValues}
-                        originalRows={originalImageHeight}
-                        originalCols={originalImageWidth}
+                        originalRows={svdImageHeight}
+                        originalCols={svdImageWidth}
                     />
                 )}
                 {!useColor && svdData?.grayscale && (
                     <SvdMatrixVisualizer
                         svdData={svdData.grayscale}
                         usedValues={usedValues}
-                        originalRows={originalImageHeight}
-                        originalCols={originalImageWidth}
+                        originalRows={svdImageHeight}
+                        originalCols={svdImageWidth}
                     />
                 )}
+
+                {/* Section 3: Cumulative Energy Chart */}
             </CardContent>
         </Card>
     );
