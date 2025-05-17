@@ -53,20 +53,12 @@ export default function SvdAnalysis({
                         />
                     )}
                     {svdData && !useColor && svdData.grayscale && (
-                        <div className="flex flex-col md:flex-row gap-4 mt-4 w-full overflow-x-hidden">
-                            <div className="flex-1 min-w-0">
-                                <SingularValuesAreaChartGrayscale
-                                    svdData={svdData.grayscale}
-                                    usedValues={usedValues}
-                                />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <CumulativeEnergyChart
-                                    svdData={svdData.grayscale}
-                                    usedValues={usedValues}
-                                />
-                            </div>
-                        </div>
+
+                        <SingularValuesAreaChartGrayscale
+                            svdData={svdData.grayscale}
+                            usedValues={usedValues}
+                        />
+
                     )}
                     {/* {svdData && (
                         (useColor && !svdData.color && <div className="h-60 flex items-center justify-center text-muted-foreground">Color SVD data not available.</div>) ||

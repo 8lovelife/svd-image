@@ -100,7 +100,7 @@ export function SingularValuesAreaChartGrayscale({
                         data={chartData}
                         margin={{ top: 5, right: 30, left: 15, bottom: 25 }}
                     >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={"hsl(var(--border))"} />
+                        {/* <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={"hsl(var(--border))"} /> */}
                         <XAxis
                             dataKey="k" type="number" tickLine={false} axisLine={false} tickMargin={8}
                             domain={[1, xMax > 0 ? xMax : 1]}
@@ -142,14 +142,18 @@ export function SingularValuesAreaChartGrayscale({
                             dot={false}
                             // activeDot={{ r: 4, strokeWidth: 2, stroke: ACTIVE_COLOR_STROKE, fill: BACKGROUND_COLOR_HSL }}
                             isAnimationActive={false}
+
                         // name={chartConfigGrayscale.value.label}
                         />
-                        {/* {usedValues > 0 && usedValues <= xMax && (
+                        {usedValues > 0 && usedValues <= xMax && (
                             <ReferenceLine
                                 x={usedValues} stroke={ACTIVE_COLOR_STROKE} // Or a distinct color like "orange" for debugging
                                 strokeDasharray="3 3" strokeWidth={1.5} ifOverflow="extendDomain"
+                                label={{
+                                    value: `k=${usedValues}`, position: "insideTopRight",
+                                }}
                             />
-                        )} */}
+                        )}
                     </RechartsAreaChart>
                 </ResponsiveContainer>
             </ChartContainer>

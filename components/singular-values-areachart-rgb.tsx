@@ -9,6 +9,7 @@ import {
     ReferenceLine,
     ResponsiveContainer,
     TooltipProps,
+    Legend,
 } from "recharts"
 import {
     ChartContainer,
@@ -17,226 +18,275 @@ import {
     ChartLegend,
     ChartLegendContent,
     type ChartConfig,
-} from "@/components/ui/chart" // Make sure this path is correct
-import { ColorSvdData } from '@/lib/utils'   // Make sure this path is correct
+} from "@/components/ui/chart" // Ensure this path is correct
+import { ColorSvdData } from '@/lib/utils'   // Ensure this path is correct
 import { useMemo } from "react"
 import React from "react" // Explicit import for React.Fragment if mapping returns fragments
 
-// Props interface for the component
 interface SingularValuesAreaChartRGBProps {
     svdData: ColorSvdData | null
     usedValues: number
-    maxValuesToPlot?: number
+    maxValuesToPlot?: number // Max number of k values to display on x-axis
 }
 
-// --- Color Definitions ---
-// Base HSL values for channel colors (ensure these CSS variables are in globals.css)
-const baseChannelColorsHSL = {
-    R: "var(--chart-red)",   // Example: "0 84.2% 60.2%" (actual HSL values)
-    G: "var(--chart-green)", // Example: "142.1 70.6% 45.3%"
-    B: "var(--chart-blue)",  // Example: "221.2 83.2% 53.3%"
+// --- Hardcoded Color Definitions (REPLACE with your theme or resolved CSS vars) ---
+// These should be HSL value strings like "H S% L%"
+const COLORS = {
+    R: { baseHslValue: "0 84.2% 60.2%", label: "Red" },
+    G: { baseHslValue: "120 60% 45%", label: "Green" },
+    B: { baseHslValue: "240 70% 60%", label: "Blue" },
 };
 
-// Helper to build full HSL/HSLA strings for SVG
-const buildHslString = (cssVarValue: string) => `hsl(${cssVarValue})`;
-const buildHslaString = (cssVarValue: string, alpha: number) => `hsla(${cssVarValue}, ${alpha})`;
+const PRIMARY_THEME_COLOR_HSL_VAL = "262.1 83.3% 57.8%";
+const BACKGROUND_COLOR_HSL_VAL = "0 0% 100%";
+const FOREGROUND_COLOR_HSL_VAL = "240 10% 3.9%";
+const BORDER_COLOR_HSL_VAL = "240 5.9% 90%";
+const MUTED_FOREGROUND_COLOR_HSL_VAL = "240 5% 64.9%";
 
-const PRIMARY_THEME_COLOR_HSL = buildHslString("var(--primary)");
-const BACKGROUND_COLOR_HSL = buildHslString("var(--background)");
-const FOREGROUND_COLOR_HSL = buildHslString("var(--foreground)");
-const BORDER_COLOR_HSL = buildHslString("var(--border)");
-const MUTED_FOREGROUND_COLOR_HSL = buildHslString("var(--muted-foreground)");
+// Helper to build full HSL/HSLA strings
+const buildHslString = (hslValue: string) => `hsl(${hslValue})`;
+const buildHslaString = (hslValue: string, alpha: number) => `hsla(${hslValue} / ${alpha})`;
 
-// Chart config for legend (uses solid colors)
-const initialChartConfigRGB: ChartConfig = {
-    R: { label: "Red", color: buildHslString(baseChannelColorsHSL.R) },
-    G: { label: "Green", color: buildHslString(baseChannelColorsHSL.G) },
-    B: { label: "Blue", color: buildHslString(baseChannelColorsHSL.B) },
+const chartConfigRGB: ChartConfig = {
+    R: { label: COLORS.R.label, color: buildHslString(COLORS.R.baseHslValue) },
+    G: { label: COLORS.G.label, color: buildHslString(COLORS.G.baseHslValue) },
+    B: { label: COLORS.B.label, color: buildHslString(COLORS.B.baseHslValue) },
 };
 
-// Opacity levels for the gradient parts within each area
-const ACTIVE_PART_OPACITY_START = 0.75; // Start of "active" segment (0 to usedValues)
-const ACTIVE_PART_OPACITY_END = 0.65;   // End of "active" segment (at usedValues)
-const INACTIVE_PART_OPACITY_START = 0.3;  // Start of "inactive" segment (after usedValues)
-const INACTIVE_PART_OPACITY_END = 0.15;   // End of "inactive" segment (at xMax)
+// Opacity levels for the gradient parts
+const ACTIVE_PART_OPACITY_START = 0.7;
+const ACTIVE_PART_OPACITY_END = 0.6;
+const INACTIVE_PART_OPACITY_START = 0.25;
+const INACTIVE_PART_OPACITY_END = 0.1;
 // --- End of Color Definitions ---
 
 
 export function SingularValuesAreaChartRGB({
     svdData,
     usedValues,
-    maxValuesToPlot = 100, // Default max points to plot
 }: SingularValuesAreaChartRGBProps) {
 
     if (!svdData || !svdData.r?.s?.length || !svdData.g?.s?.length || !svdData.b?.s?.length) {
-        return <div className="text-center text-muted-foreground p-4 h-[300px] flex items-center justify-center">Insufficient SVD data for RGB Area Chart.</div>
+        return <div className="text-center text-muted-foreground p-4 h-[300px] flex items-center justify-center">Insufficient SVD data for RGB chart.</div>
     }
 
-    // Determine the maximum number of points to plot based on available data and prop
-    const xMax = useMemo(() => Math.min(
-        svdData.r.s.length,
-        svdData.g.s.length,
-        svdData.b.s.length,
-        maxValuesToPlot
-    ), [svdData, maxValuesToPlot]);
+    const xMax = useMemo(() => {
+        if (!svdData.r?.s || !svdData.g?.s || !svdData.b?.s) return 0; // Should be caught by above check
+        return Math.min(
+            svdData.r.s.length,
+            svdData.g.s.length,
+            svdData.b.s.length,
+        );
+    }, [svdData]);
 
-    // Prepare chart data with R_value, G_value, B_value keys
     const chartData = useMemo(() => {
-        return Array.from({ length: xMax }, (_, index) => {
-            const k = index + 1;
-            return {
-                k: k,
-                R_value: svdData.r.s[index] ?? 0,
-                G_value: svdData.g.s[index] ?? 0,
-                B_value: svdData.b.s[index] ?? 0,
-            };
-        });
+        if (xMax === 0 || !svdData.r?.s || !svdData.g?.s || !svdData.b?.s) return [];
+        return Array.from({ length: xMax }, (_, index) => ({
+            k: index + 1,
+            R_value: svdData.r.s[index] ?? 0,
+            G_value: svdData.g.s[index] ?? 0,
+            B_value: svdData.b.s[index] ?? 0,
+        }));
     }, [svdData, xMax]);
 
-    // Calculate Y-axis maximum based on the plotted data
     const yMax = useMemo(() => {
         if (chartData.length === 0) return 0;
-        // If stacking, yMax is the sum of values at each k.
-        // If not stacking (overlapping), yMax is the max of any individual value.
-        // For this example with stacking, we'll let Recharts 'auto' handle it well.
-        // If precise control is needed for stacked yMax:
-        // const stackedValues = chartData.map(d => d.R_value + d.G_value + d.B_value);
-        // return Math.max(...stackedValues.filter(v => typeof v === 'number' && !isNaN(v)), 0);
         const allIndividualValues = chartData.flatMap(d => [d.R_value, d.G_value, d.B_value]);
         return Math.max(...allIndividualValues.filter(v => typeof v === 'number' && !isNaN(v)), 0);
     }, [chartData]);
 
-    // Calculate gradient stop offset (0 to 1 range)
     const gradientStopOffset = useMemo(() => {
-        if (xMax <= 1) return 0.5; // Default for single point
+        if (xMax <= 0) return 0; // No data points
+        if (xMax === 1) return 1; // Single data point, active part covers 100%
         const normalizedUsedValues = Math.max(1, Math.min(xMax, usedValues));
-        return (normalizedUsedValues - 1) / Math.max(1, xMax - 1);
+        return (normalizedUsedValues - 1) / (xMax - 1); // Range [0, 1]
     }, [usedValues, xMax]);
 
-    // Memoized SVG gradient definitions for R, G, B
     const svgGradientDefinitions = useMemo(() => {
+        // stop1Pct is where the "active" color segment ends
         const stop1Pct = Math.max(0, Math.min(100, gradientStopOffset * 100));
-        const stop2Pct = Math.min(100, stop1Pct + 0.01); // Sharp transition point
+        // stop2Pct is where the "inactive" color segment begins, immediately after active
+        const stop2Pct = stop1Pct < 100 ? Math.min(100, stop1Pct + 0.001) : 100; // Tiny gap for sharp transition
 
-        return (['R', 'G', 'B'] as const).map(channel => {
-            // Unique ID for each gradient, changing with usedValues
-            const gradientId = `areaGradient-${channel}-${usedValues}-${xMax}`;
-            const baseColorVar = baseChannelColorsHSL[channel];
+        return (['R', 'G', 'B'] as const).map(channelKey => {
+            const gradientId = `areaGradient-${channelKey}-${usedValues}-${xMax}`; // Unique ID
+            const baseHsl = COLORS[channelKey].baseHslValue;
             return (
                 <linearGradient key={gradientId} id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor={buildHslaString(baseColorVar, ACTIVE_PART_OPACITY_START)} />
-                    <stop offset={`${stop1Pct}%`} stopColor={buildHslaString(baseColorVar, ACTIVE_PART_OPACITY_END)} />
-                    <stop offset={`${stop2Pct}%`} stopColor={buildHslaString(baseColorVar, INACTIVE_PART_OPACITY_START)} />
-                    <stop offset="100%" stopColor={buildHslaString(baseColorVar, INACTIVE_PART_OPACITY_END)} />
+                    <stop offset="0%" stopColor={buildHslaString(baseHsl, ACTIVE_PART_OPACITY_START)} />
+                    <stop offset={`${stop1Pct}%`} stopColor={buildHslaString(baseHsl, ACTIVE_PART_OPACITY_END)} />
+                    {/* Only add inactive stops if the active part doesn't cover the whole area */}
+                    {stop1Pct < 100 && (
+                        <>
+                            <stop offset={`${stop2Pct}%`} stopColor={buildHslaString(baseHsl, INACTIVE_PART_OPACITY_START)} />
+                            <stop offset="100%" stopColor={buildHslaString(baseHsl, INACTIVE_PART_OPACITY_END)} />
+                        </>
+                    )}
                 </linearGradient>
             );
         });
-    }, [gradientStopOffset, usedValues, xMax]); // Dependencies for re-calculation
+    }, [gradientStopOffset, usedValues, xMax]); // COLORS is stable, no need to add unless it becomes dynamic state/prop
 
-    const xTicks = Array.from({ length: xMax }, (_, i) => i + 1);
+    const xTicks = useMemo(() => {
+        // Create reasonable tick values based on xMax
+        if (xMax <= 10) return Array.from({ length: xMax }, (_, i) => i + 1);
+        const tickCount = Math.min(10, xMax);
+        const step = Math.max(1, Math.floor(xMax / tickCount));
+        return Array.from(
+            { length: Math.ceil(xMax / step) },
+            (_, i) => Math.min(i * step + 1, xMax)
+        ).filter((v, i, arr) => i === 0 || i === arr.length - 1 || v <= xMax);
+    }, [xMax]);
+
     const yTickFormatter = (value: number): string => {
-        if (value === 0) return "0"; if (isNaN(value)) return "";
+        if (value === 0) return "0";
+        if (isNaN(value)) return "";
         if (Math.abs(value) >= 1000) return `${(value / 1000).toPrecision(3)}K`;
-        return value.toPrecision(2);
+        // Adjust precision for smaller numbers
+        const absVal = Math.abs(value);
+        if (absVal < 1 && absVal > 0) return value.toPrecision(2);
+        if (absVal < 10) return value.toPrecision(3);
+        return value.toPrecision(4);
     };
-    const yAxisLabel = `Magnitude${yMax >= 1000 ? " (K)" : ""}`;
 
+    const yAxisLabel = `Singular Value${yMax >= 1000 ? " (K)" : ""}`;
+
+    if (xMax === 0) {
+        return <div className="text-center text-muted-foreground p-4 h-[300px] flex items-center justify-center">No data to plot after filtering.</div>
+    }
 
     return (
         <>
-            {/* Render SVG defs to make gradients available in the DOM */}
             <svg width="0" height="0" style={{ position: 'absolute', visibility: 'hidden', zIndex: -1 }}>
-                <defs>
-                    {svgGradientDefinitions}
-                </defs>
+                <defs>{svgGradientDefinitions}</defs>
             </svg>
 
-            <ChartContainer config={initialChartConfigRGB} className="min-h-[300px] w-full">
+            <ChartContainer config={chartConfigRGB} className="flex-grow w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <RechartsAreaChart
                         data={chartData}
                         margin={{ top: 5, right: 30, left: 15, bottom: 25 }}
-                    // stackOffset="silhouette" // Alternative stacking presentation
                     >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={BORDER_COLOR_HSL} />
+                        {/* <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={buildHslString(BORDER_COLOR_HSL_VAL)} /> */}
                         <XAxis
                             dataKey="k" type="number" tickLine={false} axisLine={false} tickMargin={8}
-                            domain={[1, xMax > 0 ? xMax : 1]} allowDataOverflow={false} ticks={xTicks}
-                            interval={xMax > 20 ? Math.floor(xMax / 10) : 0}
-                            label={{ value: "Singular Value Index (k)", position: "insideBottom", offset: -15, fontSize: 12, fill: FOREGROUND_COLOR_HSL }}
-                            stroke={FOREGROUND_COLOR_HSL}
+                            domain={[1, xMax]}
+                            allowDataOverflow={false} ticks={xTicks}
+                            label={{ value: "Singular Value Index (k)", position: "insideBottom", offset: -15, fontSize: 12, fill: buildHslString(FOREGROUND_COLOR_HSL_VAL) }}
+                            stroke={buildHslString(FOREGROUND_COLOR_HSL_VAL)}
+                        // tick={{ fontSize: 10, fill: buildHslString(MUTED_FOREGROUND_COLOR_HSL_VAL) }}
                         />
                         <YAxis
                             type="number" tickLine={false} axisLine={false} tickMargin={8}
-                            domain={[0, yMax > 0 ? 'auto' : 1]} // 'auto' works well for stacked too
+                            domain={[0, yMax > 0 ? 'auto' : 1]}
                             allowDataOverflow={false}
-                            label={{ value: yAxisLabel, angle: -90, position: "insideLeft", offset: -10, fontSize: 12, fill: FOREGROUND_COLOR_HSL }}
+                            label={{ value: yAxisLabel, angle: -90, position: "insideLeft", offset: -10, fontSize: 12, fill: buildHslString(FOREGROUND_COLOR_HSL_VAL) }}
                             tickFormatter={yTickFormatter}
-                            stroke={FOREGROUND_COLOR_HSL}
+                            stroke={buildHslString(FOREGROUND_COLOR_HSL_VAL)}
+                        // tick={{ fontSize: 10, fill: buildHslString(MUTED_FOREGROUND_COLOR_HSL_VAL) }}
+                        // width={60} // Adjusted for potentially wider tick labels
                         />
                         <ChartTooltip
-                            cursor={{ stroke: MUTED_FOREGROUND_COLOR_HSL, strokeDasharray: "3 3" }}
-                            content={({ active, payload, label }: TooltipProps<number, string>) => {
+                            cursor={{ stroke: buildHslString(MUTED_FOREGROUND_COLOR_HSL_VAL), strokeDasharray: "3 3" }}
+                            // Pass Recharts' active, payload, label to ChartTooltipContent's props
+                            content={({ active, payload, label: rechartsLabel }: TooltipProps<number, string>) => {
+                                // console.log("Tooltip - Active:", active, "Recharts Label:", rechartsLabel, "Payload:", payload);
                                 if (active && payload && payload.length) {
                                     return (
-                                        <ChartTooltipContent className="w-[max-content]" hideIndicator>
-                                            <div className="text-sm px-2 py-1">
-                                                <div className="font-semibold mb-1">k = {label}</div>
-                                                {payload.map((item) => {
-                                                    // Extract channel from dataKey (e.g., "R_value" -> "R")
-                                                    const channelKey = (item.dataKey as string).split('_')[0] as keyof typeof initialChartConfigRGB;
-                                                    if (initialChartConfigRGB[channelKey] && typeof item.value === 'number') {
-                                                        return (
-                                                            <div key={item.dataKey} className="flex items-center justify-between">
-                                                                <span style={{ color: initialChartConfigRGB[channelKey]?.color }}>
-                                                                    {initialChartConfigRGB[channelKey]?.label || channelKey}:
-                                                                </span>
-                                                                <span className="font-semibold ml-2">
-                                                                    {yTickFormatter(item.value as number)}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })}
-                                            </div>
-                                        </ChartTooltipContent>
+                                        <ChartTooltipContent // This is the shadcn/ui component
+                                            // Props for ChartTooltipContent:
+                                            active={active} // Pass active status
+                                            payload={payload} // Pass the Recharts payload
+                                            label={rechartsLabel} // Pass Recharts' label (x-axis value) AS ChartTooltipContent's label prop
+                                            className="w-auto"
+                                            hideIndicator={false} // Show shadcn's indicator dots
+                                            labelFormatter={(valueFromLabelProp) => `k = ${valueFromLabelProp}`} // Formats the main label
+                                            formatter={(value, name, itemProps) => {
+                                                // value: The numerical value for this series (e.g., R_value at this k)
+                                                // name: The dataKey of the series (e.g., "R_value")
+                                                // itemProps: { dataKey, name (from Area's name), color, value, payload (original data point) }
+
+                                                // 'name' here is the dataKey like "R_value". We use it to get the display label.
+                                                const configEntry = chartConfigRGB[name as keyof typeof chartConfigRGB];
+                                                const displayName = configEntry?.label || name; // Should be "Red", "Green", "Blue"
+
+                                                if (typeof value === 'number') {
+                                                    return (
+                                                        <div className="flex items-center justify-between gap-x-2">
+                                                            {/* The indicator dot is now handled by ChartTooltipContent if hideIndicator={false} */}
+                                                            {/* You can add a manual one if needed:
+                                    <div
+                                        className="w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: itemProps.color }}
+                                    />
+                                    */}
+                                                            <span className="text-muted-foreground" style={{ color: itemProps.color }}>
+                                                                {displayName}:
+                                                            </span>
+                                                            <span className="font-semibold text-right tabular-nums">
+                                                                {yTickFormatter(value)}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            }}
+                                        />
                                     );
                                 }
                                 return null;
                             }}
                         />
-                        <ChartLegend content={<ChartLegendContent verticalAlign="top" />} />
 
-                        {/* Render Area for each channel with stacking and dynamic gradient fill */}
+                        <Legend
+                            onClick={alert}
+                            layout="horizontal"
+                            verticalAlign="middle"
+                            wrapperStyle={{
+                                position: 'relative',
+                                bottom: 24,
+                                right: 80,
+                                margin: 0,
+                            }}
+                            payload={[
+                                { value: "R", type: "circle", id: "r", color: "#EF4444" },
+                                { value: "G", type: "circle", id: "g", color: "#10B981" },
+                                { value: "B", type: "circle", id: "b", color: "#3B82F6" },
+                            ]}
+                        />
+                        {/* <ChartLegend
+                            onClick={alert}
+                            content={<ChartLegendContent verticalAlign="top" />}
+                            align="right"
+                            verticalAlign="top"
+                            wrapperStyle={{ top: 0, right: 0, left: 'auto' }}
+                        /> */}
                         {(['R', 'G', 'B'] as const).map((channel) => {
                             const gradientId = `areaGradient-${channel}-${usedValues}-${xMax}`;
-                            const channelBaseColorVar = baseChannelColorsHSL[channel];
+                            const baseHsl = COLORS[channel].baseHslValue;
                             return (
                                 <Area
-                                    key={gradientId} // CRITICAL: Force re-render of Area when its gradientId changes
+                                    key={`${channel}_value`}
                                     dataKey={`${channel}_value`}
                                     type="natural"
                                     fill={`url(#${gradientId})`}
-                                    stroke={buildHslString(channelBaseColorVar)}
-                                    strokeWidth={1} // Thinner stroke for stacked areas can look cleaner
+                                    stroke={buildHslString(baseHsl)}
+                                    strokeWidth={1.5}
                                     dot={false}
-                                    activeDot={{ r: 4, strokeWidth: 2, stroke: buildHslString(channelBaseColorVar), fill: BACKGROUND_COLOR_HSL }}
+                                    // activeDot={{ r: 4, strokeWidth: 2, stroke: buildHslString(baseHsl), fill: buildHslString(BACKGROUND_COLOR_HSL_VAL) }}
                                     isAnimationActive={false}
-                                    name={initialChartConfigRGB[channel].label} // For legend and tooltip
-                                    stackId="rgb" // Apply stacking
-                                    fillOpacity={1}   // Full opacity for stacked layers
+                                // name={chartConfigRGB[channel].label}
                                 />
                             );
                         })}
 
                         {usedValues > 0 && usedValues <= xMax && (
                             <ReferenceLine
-                                x={usedValues} stroke={PRIMARY_THEME_COLOR_HSL}
-                                strokeDasharray="2 2" strokeWidth={1.5} ifOverflow="extendDomain"
+                                x={usedValues} stroke={buildHslString(PRIMARY_THEME_COLOR_HSL_VAL)}
+                                strokeDasharray="3 3" strokeWidth={1.5} ifOverflow="extendDomain"
                                 label={{
                                     value: `k=${usedValues}`, position: "insideTopRight",
-                                    fill: PRIMARY_THEME_COLOR_HSL, fontSize: 11, dy: -5,
+                                    fill: buildHslString(PRIMARY_THEME_COLOR_HSL_VAL), fontSize: 11, dy: -5, dx: -2
                                 }}
                             />
                         )}
