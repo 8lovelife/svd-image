@@ -130,12 +130,23 @@ export function SingularValuesAreaChartRGB({
     const xTicks = useMemo(() => {
         // Create reasonable tick values based on xMax
         if (xMax <= 10) return Array.from({ length: xMax }, (_, i) => i + 1);
+
+        // For larger ranges, create about 5-10 ticks evenly distributed
         const tickCount = Math.min(10, xMax);
-        const step = Math.max(1, Math.floor(xMax / tickCount));
-        return Array.from(
-            { length: Math.ceil(xMax / step) },
-            (_, i) => Math.min(i * step + 1, xMax)
-        ).filter((v, i, arr) => i === 0 || i === arr.length - 1 || v <= xMax);
+        const step = Math.max(1, Math.floor(xMax / (tickCount - 1)));
+
+        // Generate evenly spaced ticks with first and last tick guaranteed
+        const ticks = [];
+        for (let i = 1; i <= xMax; i += step) {
+            ticks.push(i);
+        }
+
+        // Ensure the last tick (xMax) is included if not already
+        if (ticks[ticks.length - 1] !== xMax) {
+            ticks.push(xMax);
+        }
+
+        return ticks;
     }, [xMax]);
 
     const yTickFormatter = (value: number): string => {

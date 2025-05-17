@@ -80,11 +80,37 @@ export function SingularValuesAreaChartGrayscale({
         );
     }, [gradientId, gradientStopOffset]);
 
-    const xTicks = Array.from({ length: xMax }, (_, i) => i + 1);
+    const xTicks = useMemo(() => {
+        // Create reasonable tick values based on xMax
+        if (xMax <= 10) return Array.from({ length: xMax }, (_, i) => i + 1);
+
+        // For larger ranges, create about 5-10 ticks evenly distributed
+        const tickCount = Math.min(10, xMax);
+        const step = Math.max(1, Math.floor(xMax / (tickCount - 1)));
+
+        // Generate evenly spaced ticks with first and last tick guaranteed
+        const ticks = [];
+        for (let i = 1; i <= xMax; i += step) {
+            ticks.push(i);
+        }
+
+        // Ensure the last tick (xMax) is included if not already
+        if (ticks[ticks.length - 1] !== xMax) {
+            ticks.push(xMax);
+        }
+
+        return ticks;
+    }, [xMax]);
+
     const yTickFormatter = (value: number): string => {
-        if (value === 0) return "0"; if (isNaN(value)) return "";
+        if (value === 0) return "0";
+        if (isNaN(value)) return "";
         if (Math.abs(value) >= 1000) return `${(value / 1000).toPrecision(3)}K`;
-        return value.toPrecision(2);
+        // Adjust precision for smaller numbers
+        const absVal = Math.abs(value);
+        if (absVal < 1 && absVal > 0) return value.toPrecision(2);
+        if (absVal < 10) return value.toPrecision(3);
+        return value.toPrecision(4);
     };
     const yAxisLabel = `Singular Value${yMax >= 1000 ? " (K)" : ""}`;
 
@@ -105,7 +131,8 @@ export function SingularValuesAreaChartGrayscale({
                             dataKey="k" type="number" tickLine={false} axisLine={false} tickMargin={8}
                             domain={[1, xMax > 0 ? xMax : 1]}
                             allowDataOverflow={false} ticks={xTicks}
-                            interval={xMax > 20 ? Math.floor(xMax / 10) : 0}
+                            // interval={xMax > 20 ? Math.floor(xMax / 10) : 0}
+                            // interval={0}
                             label={{ value: "Singular Value Index (k)", position: "insideBottom", offset: -15, fontSize: 12, fill: "hsl(var(--foreground))" }}
                             stroke={"hsl(var(--foreground))"}
                         />
