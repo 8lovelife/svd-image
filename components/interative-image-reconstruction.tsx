@@ -7,6 +7,8 @@ import { AppSvdData, ColorSvdData, ImageDataState, RawPixelData, SvdData } from 
 import ImageUpload from "./image-upload";     // Make sure this path is correct
 import { performColorSVD } from "@/lib/svd";    // Make sure this path is correct
 import InteractiveImageDisplay from "./interactive-image-display";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { HelpCircle } from "lucide-react"
 
 
 interface ImageReconstructionProps {
@@ -106,6 +108,40 @@ export default function InterativeImageReconstruction({
 
     }, [appSvdData?.rawImageData, singularValuesUsed, useColor, maxKForCurrentMode]);
 
+
+    const getEnergyColorClass = (value: number): string => {
+        if (value >= 0.95) return "text-green-600"
+        if (value >= 0.8) return "text-yellow-500"
+        return "text-red-500"
+    }
+
+    const doCumulativeEnergy = (s: number[]): number[] => {
+        const squared = s.map(x => x * x);
+        const total = squared.reduce((sum, val) => sum + val, 0);
+        const cumulative: number[] = [];
+        let runningSum = 0;
+        for (let i = 0; i < squared.length; i++) {
+            runningSum += squared[i];
+            cumulative.push(runningSum / total);
+        }
+        return cumulative;
+    };
+
+    const energyCurves = useMemo(() => {
+        if (!appSvdData) return null;
+        if (useColor && appSvdData.color) {
+            const rEnergy = doCumulativeEnergy(appSvdData.color.r.s);
+            const gEnergy = doCumulativeEnergy(appSvdData.color.g.s);
+            const bEnergy = doCumulativeEnergy(appSvdData.color.b.s);
+            return { r: rEnergy, g: gEnergy, b: bEnergy }
+        }
+        if (!useColor && appSvdData.grayscale) {
+            const gray = doCumulativeEnergy(appSvdData.grayscale.s);
+            return { gray: gray }
+        }
+        return null;
+    }, [appSvdData, useColor]);
+
     return (
         <Card className="h-full flex flex-col overflow-hidden"> {/* CARD IS NOW THE ROOT, FILLS PARENT */}
             <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
@@ -173,9 +209,99 @@ export default function InterativeImageReconstruction({
                     <div className="border-t border-dashed border-border pt-2">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                             <div className="font-medium">Mode:</div>
-                            <div>{appSvdData ? (useColor ? "Color (RGB)" : "Grayscale") : "-"}</div>
-                            <div className="font-medium">Singular Values (k):</div>
-                            <div>{appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}</div>
+                            <div>{appSvdData ? (useColor ? "Color ( RGB )" : "Grayscale") : "-"}</div>
+                            <div className="font-medium">Singular Index (k):</div>
+                            <div>{appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}
+                            </div>
+
+                            <div className="font-medium">Singular Value:</div>
+                            <div>
+                                {appSvdData ? (
+                                    useColor && appSvdData.color ? (
+                                        <>
+                                            <span>
+                                                R: {appSvdData.color.r.s[singularValuesUsed - 1].toFixed(2)}
+                                            </span>
+                                            {" | "}
+                                            <span>
+                                                G: {appSvdData.color.g.s[singularValuesUsed - 1].toFixed(2)}
+                                            </span>
+                                            {" | "}
+                                            <span>
+                                                B: {appSvdData.color.b.s[singularValuesUsed - 1].toFixed(2)}
+                                            </span>
+                                        </>
+                                    ) : appSvdData.grayscale ? (
+                                        <span >
+                                            {appSvdData.grayscale.s[singularValuesUsed - 1].toFixed(2)}
+                                        </span>
+                                    ) : (
+                                        "-"
+                                    )
+                                ) : (
+                                    "-"
+                                )}
+                            </div>
+
+                            <div className="font-medium">Cumulative Energy:</div>
+                            <div>
+
+                                {/* {energyCurves && (() => {
+                                    if (useColor) {
+                                        const { r, g, b } = energyCurves as { r: number[]; g: number[]; b: number[] }
+                                        return (
+                                            <>
+                                                <span className={getEnergyColorClass(r[singularValuesUsed - 1])}>
+                                                    R: {(r[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                                </span>{" "}
+                                                <span className={getEnergyColorClass(g[singularValuesUsed - 1])}>
+                                                    G: {(g[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                                </span>{" "}
+                                                <span className={getEnergyColorClass(b[singularValuesUsed - 1])}>
+                                                    B: {(b[singularValuesUsed - 1] * 100).toFixed(1)}%
+                                                </span>
+                                            </>
+                                        )
+                                    } else {
+                                        const { gray } = energyCurves as { gray: number[] }
+                                        const val = gray[singularValuesUsed - 1] * 100
+                                        return (
+                                            <span className={getEnergyColorClass(gray[singularValuesUsed - 1])}>
+                                                {val.toFixed(2)}%
+                                            </span>
+                                        )
+                                    }
+                                })()
+                                
+                                } */}
+
+                                {energyCurves ? (
+                                    useColor ? (
+                                        <>
+                                            <span >
+                                                R: {((energyCurves as { r: number[] }).r[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                            </span>
+                                            {" | "}
+                                            <span >
+                                                G: {((energyCurves as { g: number[] }).g[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                            </span>
+                                            {" | "}
+                                            <span >
+                                                B: {((energyCurves as { b: number[] }).b[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span >
+                                            {((energyCurves as { gray: number[] }).gray[singularValuesUsed - 1] * 100).toFixed(2)}%
+                                        </span>
+                                    )
+                                ) : (
+                                    "-"
+                                )}
+
+
+                            </div>
+
                             <div className="font-medium">Compression Ratio:</div>
                             <div>{appSvdData ? (compressionRatioForCurrentK > 0 ?
                                 `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}

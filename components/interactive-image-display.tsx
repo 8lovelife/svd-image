@@ -6,7 +6,6 @@ import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Download, ImageIcon } from "lucide-react"
 import { AppSvdData, ColorSvdData, ImageDataState, RawPixelData, SvdData } from "@/lib/utils"
-import { performSVD, reconstructColor, reconstructColorImage, reconstructGrayImage, reconstructImage } from "@/lib/svd"
 import App from "next/app"
 
 interface InteractiveImageDisplayProps {
@@ -351,8 +350,10 @@ export default function InteractiveImageDisplay({
 
     if (isProcessing && !originalImage) {
         return (
-            <div className="flex items-center justify-center border rounded-lg p-4 bg-muted/10 h-48">
+            <div className="border rounded-lg p-4 bg-muted/10 h-48 flex flex-col justify-center space-y-2">
                 <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
             </div>
         )
     }
