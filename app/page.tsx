@@ -27,7 +27,7 @@ export default function Home() {
             <ResizablePanelGroup direction="horizontal" className="flex h-full w-full rounded-lg border"
             >
                 {/* Left Panel - Controls */}
-                <ResizablePanel defaultSize={15} minSize={15} maxSize={20}>
+                <ResizablePanel defaultSize={10} minSize={10} maxSize={15}>
                     <ImageSelectionPanel onImageLoaded={(imageData, rawImageData, width, height, svdData, grayscale, reconstructColorPixelData, reconstructGrayPixelData) => {
 
                         if (svdData) {
@@ -60,7 +60,7 @@ export default function Home() {
                 <ResizableHandle withHandle />
 
                 {/* Middle Panel - Original Image */}
-                <ResizablePanel defaultSize={15} minSize={25} maxSize={35}>
+                <ResizablePanel defaultSize={15} minSize={27} maxSize={30}>
                     <InterativeImageReconstruction
                         isProcessing={isProcessing}
                         useColor={useColor}

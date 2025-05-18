@@ -36,7 +36,7 @@ export default function SvdAnalysis({
             <CardHeader className="flex-shrink-0"> {/* Header doesn't grow/shrink */}
                 <CardTitle>SVD Data Analysis</CardTitle>
                 <CardDescription>
-                    Visualize and explore the singular‐value spectrum, compression ratio, and reconstruction quality.
+                    Visualize and explore the singular‐value spectrum, retained energy, and reconstruction quality under varying compression levels.
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"> {/* CONTENT IS SCROLLABLE AND EXPANDS */}
