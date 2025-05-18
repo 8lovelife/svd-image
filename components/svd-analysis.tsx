@@ -1,14 +1,14 @@
 "use client"
 
-import { AppSvdData, ColorSvdData, SvdData } from "@/lib/utils";
+import { AppSvdData } from "@/lib/utils";
 import { SingularValuesAreaChartGrayscale } from "./singular-values-areachart-grayscale";
 import { SingularValuesAreaChartRGB } from "./singular-values-areachart-rgb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card"; // shadcn/ui Card
-import { SvdMatrixVisualizer } from "./svd-matrix";
-import App from "next/app";
 import { CumulativeEnergyChart } from "./cumulative-energy-areachart-grascale";
-import { ChartZoomWrapper } from "./chart-zoom-wrapper";
 import { CumulativeEnergyChartRGB } from "./cumulative-energy-areachart-rgb";
+import { SvdMatrixVisualizerGray } from "./svd-matrix-visualizer-grayscale";
+import { SvdMatrixVisualizerRgb } from "./svd-matrix-visualizer-rgb";
+import { SvdMatrixVisualizerUnified } from "./svd-matrix-visualizer";
 
 interface SvdAnalysisProps {
     svdData: AppSvdData | null; // SVD data for color or grayscale
@@ -94,32 +94,44 @@ export default function SvdAnalysis({
 
 
                     )}
-                    {/* {svdData && (
-                        (useColor && !svdData.color && <div className="h-60 flex items-center justify-center text-muted-foreground">Color SVD data not available.</div>) ||
-                        (!useColor && !svdData.grayscale && <div className="h-60 flex items-center justify-center text-muted-foreground">Grayscale SVD data not available.</div>)
-                    )} */}
+
                 </div>
 
                 {/* Section 2: SVD Matrix Visualizer */}
                 {/* Show matrices only if the relevant SVD data for the current mode exists */}
-                {useColor && svdData?.color?.r && ( // Example for Red channel if in color mode
-                    <SvdMatrixVisualizer
-                        svdData={svdData.color.r} // Ensure svdData.color.r is of type SvdData {u,s,v}
+                {/* {useColor && svdData?.color?.r && ( // Example for Red channel if in color mode
+
+
+                    <SvdMatrixVisualizerRgb
+                        svdData={svdData.color}
                         usedValues={usedValues}
-                        originalRows={svdImageHeight}
-                        originalCols={svdImageWidth}
+                        originalRows={svdImageHeight} // Height of the matrix passed to SVD
+                        originalCols={svdImageWidth}  // Width of the matrix passed to SVD
                     />
-                )}
+
+
+                )} */}
+                {/* 
                 {!useColor && svdData?.grayscale && (
-                    <SvdMatrixVisualizer
+                    <SvdMatrixVisualizerGray
                         svdData={svdData.grayscale}
                         usedValues={usedValues}
                         originalRows={svdImageHeight}
                         originalCols={svdImageWidth}
                     />
+                )} */}
+
+
+                {svdData && ( // Only render if there's any SVD data at all
+                    <SvdMatrixVisualizerUnified
+                        svdDataSource={useColor ? svdData.color : svdData.grayscale}
+                        useColor={useColor}
+                        usedValues={usedValues}
+                        originalRows={svdImageHeight}
+                        originalCols={svdImageWidth}
+                    />
                 )}
 
-                {/* Section 3: Cumulative Energy Chart */}
             </CardContent>
         </Card>
     );

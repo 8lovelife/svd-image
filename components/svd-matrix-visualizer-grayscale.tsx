@@ -1,12 +1,12 @@
 "use client"
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SvdData } from "@/lib/utils";
 import { MatrixGridDisplay } from "./matrix-grid-display";
 import { multiplyMatrices, multiplyMatrixByDiagonal } from "@/lib/svd"; // Ensure this path is correct
 import { ScrollArea, ScrollBar } // Import Shadcn ScrollArea components
     from "@/components/ui/scroll-area";
 
-interface SvdMatrixVisualizerProps {
+interface SvdMatrixVisualizerGrayProps {
     svdData: SvdData | null;
     usedValues: number; // k
     originalRows: number; // M_orig
@@ -31,14 +31,62 @@ function createSMatrixDynamic(sValues: number[], k: number): number[][] {
     return S_matrix;
 }
 
-export function SvdMatrixVisualizer({
+export function SvdMatrixVisualizerGray({
     svdData,
     usedValues, // k
     originalRows, // M_orig
     originalCols, // N_orig
-    maxCellDisplay = 10,
+    maxCellDisplay = 15,
     matrixCellSize = 14, // Slightly adjusted for potentially tighter fit
-}: SvdMatrixVisualizerProps) {
+}: SvdMatrixVisualizerGrayProps) {
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    // const [width, height] = useMeasure(); // from react-use, applied to containerRef
+    // OR a more manual ResizeObserver setup:
+    const [containerWidth, setContainerWidth] = useState(0);
+
+    useEffect(() => {
+        const element = containerRef.current;
+        if (!element) return;
+
+        const observer = new ResizeObserver(entries => {
+            if (entries[0]) {
+                setContainerWidth(entries[0].contentRect.width);
+            }
+        });
+        observer.observe(element);
+        return () => observer.unobserve(element);
+    }, []);
+
+
+    // Dynamically calculate cellSize and maxDisplay based on containerWidth
+    const dynamicParams = useMemo(() => {
+        if (!containerWidth) return { cellSize: matrixCellSize, maxDisplay: maxCellDisplay }; // Default values
+
+        const numMatricesAndSymbols = 5; // Ak, symbol, U, symbol, S, symbol, VT (approx)
+        const availableSpacePerMatrixRoughly = containerWidth / numMatricesAndSymbols;
+
+        let newCellSize = matrixCellSize;
+        let newMaxDisplay = maxCellDisplay;
+
+        // Heuristic: Try to fit maxDisplay cells first
+        if (availableSpacePerMatrixRoughly < newMaxDisplay * (newCellSize + 2)) { // +2 for padding/border per cell
+            // Not enough space for 10 cells at default size, reduce maxDisplay
+            newMaxDisplay = Math.max(3, Math.floor(availableSpacePerMatrixRoughly / (newCellSize + 2)));
+        }
+
+        // If still not enough, or if we want to make cells smaller for more to fit
+        if (availableSpacePerMatrixRoughly < newMaxDisplay * (newCellSize + 2)) {
+            newCellSize = Math.max(8, Math.floor(availableSpacePerMatrixRoughly / newMaxDisplay) - 2);
+        }
+        // Cap cell size
+        newCellSize = Math.min(14, newCellSize);
+
+
+        // console.log("Container Width:", containerWidth, "New Cell Size:", newCellSize, "New Max Display:", newMaxDisplay);
+        return { cellSize: newCellSize, maxDisplay: newMaxDisplay };
+
+    }, [containerWidth]);
 
     if (!svdData || !svdData.s || !svdData.u || !svdData.v || svdData.u.length === 0 || svdData.v.length === 0) {
         return <p className="text-muted-foreground text-sm p-4 text-center">SVD matrix data incomplete or invalid.</p>;
@@ -83,21 +131,22 @@ export function SvdMatrixVisualizer({
     );
 
     return (
-        <div className="pt-4 w-full">
+        <div className="pt-4 w-full" ref={containerRef}> {/* Attach ref here or to the inner flex container */}
             <ScrollArea className="w-full whitespace-nowrap rounded-md">
-                <div className="flex justify-center"> {/* This centers the 'flex items-center' div if it's narrower */}
-                    <div className="flex items-center gap-x-1 p-2"> {/* Content row */}
-                        <MatrixGridDisplay matrix={Ak_reconstructed} title={`Aₖ ${ak_dims_title}`} maxDisplaySize={maxCellDisplay} cellSizePx={matrixCellSize} />
+                <div className="flex justify-center">
+                    <div className="flex items-center gap-x-1 p-2">
+                        <MatrixGridDisplay matrix={Ak_reconstructed} title={`Aₖ ${ak_dims_title}`} maxDisplaySize={dynamicParams.maxDisplay} cellSizePx={dynamicParams.cellSize} />
                         <MathSymbol>≈</MathSymbol>
-                        <MatrixGridDisplay matrix={U_k} title={`Uₖ ${u_k_dims_title}`} maxDisplaySize={maxCellDisplay} cellSizePx={matrixCellSize} />
+                        <MatrixGridDisplay matrix={U_k} title={`Uₖ ${u_k_dims_title}`} maxDisplaySize={dynamicParams.maxDisplay} cellSizePx={dynamicParams.cellSize} />
                         <MathSymbol>·</MathSymbol>
-                        <MatrixGridDisplay matrix={S_k_matrix} title={`Sₖ ${s_k_dims_title} (Diag.)`} maxDisplaySize={maxCellDisplay} cellSizePx={matrixCellSize} highlightActiveFn={(r, c) => r === c} />
+                        <MatrixGridDisplay matrix={S_k_matrix} title={`Sₖ ${s_k_dims_title} (Diag.)`} maxDisplaySize={dynamicParams.maxDisplay} cellSizePx={dynamicParams.cellSize} highlightActiveFn={(r, c) => r === c} />
                         <MathSymbol>·</MathSymbol>
-                        <MatrixGridDisplay matrix={VT_k} title={`Vᵀₖ ${vt_k_dims_title}`} maxDisplaySize={maxCellDisplay} cellSizePx={matrixCellSize} />
+                        <MatrixGridDisplay matrix={VT_k} title={`Vᵀₖ ${vt_k_dims_title}`} maxDisplaySize={dynamicParams.maxDisplay} cellSizePx={dynamicParams.cellSize} />
                     </div>
                 </div>
                 <ScrollBar orientation="horizontal" className="h-2.5 [&>div]:h-full" />
             </ScrollArea>
+
 
             <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
                 Approximation: A<sub className="text-[0.6em] align-baseline">{M_actual}×{N_actual}</sub>

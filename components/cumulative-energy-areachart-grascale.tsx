@@ -16,12 +16,12 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart"
-import { SvdData } from '@/lib/utils'
+import { GraySvdData, SvdData } from '@/lib/utils'
 import { useMemo } from "react"
 import React from "react"
 
 interface CumulativeEnergyChartProps {
-    svdData: SvdData | null
+    svdData: GraySvdData | null
     usedValues: number // k value currently selected by user
 }
 

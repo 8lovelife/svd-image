@@ -178,7 +178,8 @@ export default function InterativeImageReconstruction({
                             <div>{appSvdData ? `${singularValuesUsed} / ${maxKForCurrentMode > 0 ? maxKForCurrentMode : "-"}` : "-"}</div>
                             <div className="font-medium">Compression Ratio:</div>
                             <div>{appSvdData ? (compressionRatioForCurrentK > 0 ?
-                                `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}</div>
+                                `${compressionRatioForCurrentK.toFixed(1)}x` : (singularValuesUsed > 0 ? "Calculating..." : "N/A")) : "-"}
+                            </div>
                         </div>
                     </div>
                 </div>

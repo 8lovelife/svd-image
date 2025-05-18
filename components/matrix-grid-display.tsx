@@ -64,6 +64,16 @@ export const MatrixGridDisplay: React.FC<MatrixGridDisplayProps> = ({
     }
 
 
+    const valueFormatter = (value: number): string => {
+        if (value === 0) return "0"; if (isNaN(value)) return "";
+        if (Math.abs(value) >= 1000) return `${(value / 1000).toPrecision(3)}K`;
+        const absVal = Math.abs(value);
+        if (absVal < 1 && absVal > 0) return value.toPrecision(2);
+        if (absVal < 10) return value.toPrecision(3);
+        return value.toPrecision(4);
+    };
+
+
     return (
         <div className="flex flex-col items-center">
             <p className="text-xs font-medium mb-1 text-center whitespace-nowrap">
@@ -91,7 +101,7 @@ export const MatrixGridDisplay: React.FC<MatrixGridDisplayProps> = ({
                                     key={`${rowIndex}-${colIndex}`}
                                     className={`flex items-center justify-center border border-border/20 overflow-hidden ${isHighlighted ? "ring-1 ring-primary ring-inset" : ""}`}
                                     style={{ backgroundColor: bgColor, width: `${cellSizePx}px`, height: `${cellSizePx}px` }}
-                                    title={`(${rowIndex},${colIndex}): ${value.toPrecision(3)}`}
+                                    title={`(${rowIndex},${colIndex}): ${valueFormatter(value)}`}
                                 />
                             );
                         })

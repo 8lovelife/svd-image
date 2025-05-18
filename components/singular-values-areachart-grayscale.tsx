@@ -145,7 +145,7 @@ export function SingularValuesAreaChartGrayscale({
     }, [xDomainEnd]);
 
 
-    const yTickFormatter = (value: number): string => { /* Your existing yTickFormatter */
+    const yTickFormatter = (value: number): string => {
         if (value === 0) return "0"; if (isNaN(value)) return "";
         if (Math.abs(value) >= 1000) return `${(value / 1000).toPrecision(3)}K`;
         const absVal = Math.abs(value);

@@ -19,7 +19,7 @@ import {
     ChartLegendContent,
     type ChartConfig,
 } from "@/components/ui/chart"
-import { ColorSvdData, LegendPayload, SvdData } from '@/lib/utils' // Assuming SvdComponents is {u,s,v}
+import { ColorSvdData, SvdData } from '@/lib/utils' // Assuming SvdComponents is {u,s,v}
 import { useMemo, useState, useCallback } from "react"
 import React from "react"
 import { Payload } from "recharts/types/component/DefaultLegendContent"

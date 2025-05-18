@@ -349,11 +349,11 @@ export function SingularValuesAreaChartRGB({
                         {usedValues > 0 && usedValues <= xMaxOriginalDataLength && ( //  data length
                             <ReferenceLine
                                 x={usedValues}
-                                stroke={buildHslString(PRIMARY_THEME_COLOR_HSL_VAL)} // 
+                                stroke={"#4B5563"} // 
                                 strokeDasharray="3 3" strokeWidth={1.5} ifOverflow="extendDomain"
                                 label={{
                                     value: `k=${usedValues}`, position: "insideTopRight", // 
-                                    fill: buildHslString(PRIMARY_THEME_COLOR_HSL_VAL), fontSize: 11, dy: -5, dx: -2 // 
+                                    fill: "#4B5563", fontSize: 11, dy: -5, dx: -2 // 
                                 }}
                             />
                         )}
