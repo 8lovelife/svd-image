@@ -362,13 +362,13 @@ export function CumulativeEnergyChartRGB({
                             ifOverflow="visible"
                         />
                     </RechartsAreaChart>
-                    <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
-                        Adding more singular values gradually preserves more of the original data’s information.
-                    </p>
+
                 </ResponsiveContainer>
             </ChartContainer>
-
-
+            {/* 
+            <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
+                Adding more singular values gradually preserves more of the original data’s information.
+            </p> */}
 
         </>
     );

@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SVD Image Dimension Reduction",
   description: "Upload and compress images with Singular Value Decomposition (SVD): explore how truncating singular values affects reconstruction quality.",
+  icons: {
+    icon: 'favicon.ico'
+  }
 };
 
 export default function RootLayout({

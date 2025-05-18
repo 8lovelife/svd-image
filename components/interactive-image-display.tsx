@@ -5,13 +5,13 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Download, ImageIcon } from "lucide-react"
-import { AppSvdData, ColorSvdData, ImageDataState, RawPixelData, SvdData } from "@/lib/utils"
+import { AppSvdData, ColorSvdData, GraySvdData, ImageDataState, RawPixelData, SvdData } from "@/lib/utils"
 import App from "next/app"
 
 interface InteractiveImageDisplayProps {
     originalImage: string | null
-    svdData: {
-        grayscale?: SvdData
+    svdData?: {
+        grayscale?: GraySvdData | null
         color?: ColorSvdData
     } | null
     width: number

@@ -64,7 +64,7 @@ export function SvdMatrixRgbVisualizer({
 
             <SvdMatrixVisualizerRgb
                 svdData={svdData}
-                activeChannel={activeVisualizerChannel}
+                // activeChannel={activeVisualizerChannel}
                 usedValues={usedValues}
                 originalRows={originalRows}
                 originalCols={originalCols}

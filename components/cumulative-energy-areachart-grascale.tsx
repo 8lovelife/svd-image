@@ -288,9 +288,9 @@ export function CumulativeEnergyChart({
                         />
                     </RechartsAreaChart>
                 </ResponsiveContainer>
-                <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
+                {/* <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
                     Adding more singular values gradually preserves more of the original data’s information.
-                </p>
+                </p> */}
             </ChartContainer>
         </>
     );

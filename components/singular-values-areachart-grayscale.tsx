@@ -233,9 +233,9 @@ export function SingularValuesAreaChartGrayscale({
                     </RechartsAreaChart>
                 </ResponsiveContainer>
             </ChartContainer>
-            <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
+            {/* <p className="text-xs text-muted-foreground text-center mt-3 mb-2 leading-relaxed">
                 Singular values are sorted by importance, with each successive one contributing less to the data’s structure.
-            </p>
+            </p> */}
         </>
     );
 }
