@@ -13,6 +13,8 @@ A visual and interactive web tool to explore **Singular Value Decomposition (SVD
 - 🎚 Interactive slider to control the number of singular values (k)  
 - 📈 Visual comparison of reconstruction quality and compression ratio  
 
+## 📸 Screenshots
+![svd](docs/svd.jpg)
 
 ## 🚀 Live Demo
 
